@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   MapPin, Zap, Star, Users, ArrowRight, CheckCircle,
-  Globe, Route, Clock, Shield, ChevronRight, Menu, X
+  Globe, Route, Clock, Shield, ChevronRight, Menu, X,
+  Phone, Mail, Share2, Heart, MessageCircle, ExternalLink
 } from "lucide-react";
-// import { ImageWithFallback } from "./figma/ImageWithFallback";
 
 const HERO_IMAGE = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1600&h=900&fit=crop&auto=format";
 const DEST_IMAGES = [
@@ -58,7 +58,7 @@ const testimonials = [
   },
 ];
 
-export default function Page() {
+export default function LandingPage() {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -69,16 +69,23 @@ export default function Page() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
           <div className="flex items-center gap-2">
-            <img src="/images/logo-removebg-preview.png" alt="EscapeRoute" className="h-15 w-auto" />
+            <img src="/images/logo-removebg-preview.png" alt="EscapeRoute" className="w-25 h-30 object-contain" />
+            {/* <span className="font-bold text-lg text-slate-900">EscapeRoute</span> */}
           </div>
           <div className="hidden md:flex items-center gap-8">
             {["Features", "How it Works", "Destinations", "Pricing"].map(item => (
-              <button key={item} className="text-slate-600 hover:text-[#2563eb] transition-colors" style={{ fontSize: "0.875rem", fontWeight: 500 }}>{item}</button>
+              <button key={item} className="text-slate-600 hover:text-blue-600 transition-colors text-sm font-medium">
+                {item}
+              </button>
             ))}
           </div>
           <div className="hidden md:flex items-center gap-3">
-            <button onClick={() => router.push("/login")} className="text-slate-700 hover:text-[#2563eb] transition-colors" style={{ fontSize: "0.875rem", fontWeight: 600 }}>Sign In</button>
-            <button onClick={() => router.push("/dashboard")} className="bg-[#2563eb] text-white px-4 py-2 rounded-lg hover:bg-[#1d4ed8] transition-colors" style={{ fontSize: "0.875rem", fontWeight: 600 }}>Get Started</button>
+            <button onClick={() => router.push("/dashboard")} className="text-slate-700 hover:text-blue-600 transition-colors text-sm font-semibold">
+              Sign In
+            </button>
+            <button onClick={() => router.push("/dashboard")} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold">
+              Get Started
+            </button>
           </div>
           <button className="md:hidden p-2" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -87,10 +94,10 @@ export default function Page() {
         {menuOpen && (
           <div className="md:hidden bg-white border-t border-slate-100 px-4 py-4 flex flex-col gap-4">
             {["Features", "How it Works", "Destinations", "Pricing"].map(item => (
-              <button key={item} className="text-left text-slate-600" style={{ fontWeight: 500 }}>{item}</button>
+              <button key={item} className="text-left text-slate-600 font-medium">{item}</button>
             ))}
-            <button onClick={() => router.push("/login")} className="text-left text-[#2563eb]" style={{ fontWeight: 600 }}>Sign In</button>
-            <button onClick={() => router.push("/signup")} className="bg-[#2563eb] text-white px-4 py-2 rounded-lg w-full" style={{ fontWeight: 600 }}>Get Started</button>
+            <button onClick={() => router.push("/dashboard")} className="text-left text-blue-600 font-semibold">Sign In</button>
+            <button onClick={() => router.push("/dashboard")} className="bg-blue-600 text-white px-4 py-2 rounded-lg w-full font-semibold">Get Started</button>
           </div>
         )}
       </nav>
@@ -98,19 +105,19 @@ export default function Page() {
       {/* HERO */}
       <section className="relative min-h-screen flex items-center justify-center pt-16">
         <div className="absolute inset-0">
-          {/* <ImageWithFallback src={HERO_IMAGE} alt="Aerial travel landscape" className="w-full h-full object-cover" /> */}
+          <img src={HERO_IMAGE} alt="Travel" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-slate-900/70 via-slate-900/50 to-white" />
         </div>
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center pt-20 pb-32">
           <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/25 rounded-full px-4 py-2 mb-6">
-            <Zap className="w-4 h-4 text-[#f97316]" />
-            <span className="text-white" style={{ fontSize: "0.875rem", fontWeight: 600 }}>AI-Powered Travel Planning</span>
+            <Zap className="w-4 h-4 text-orange-500" />
+            <span className="text-white text-sm font-semibold">AI-Powered Travel Planning</span>
           </div>
-          <h1 className="text-white mb-6" style={{ fontSize: "clamp(2.5rem, 6vw, 4.5rem)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+          <h1 className="text-white mb-6 text-5xl md:text-7xl font-extrabold tracking-tight">
             Plan Smarter.<br />Travel Better.
           </h1>
-          <p className="text-slate-200 mb-10 max-w-2xl mx-auto" style={{ fontSize: "clamp(1rem, 2.5vw, 1.25rem)", lineHeight: 1.6 }}>
-            Generate optimized travel itineraries in seconds. Discover attractions, plan routes, and explore the world — effortlessly.
+          <p className="text-slate-200 mb-10 max-w-2xl mx-auto text-lg md:text-xl">
+            Generate optimized travel itineraries in seconds. Discover attractions, plan routes, and explore the world effortlessly.
           </p>
           <div className="flex flex-col sm:flex-row items-center gap-3 max-w-xl mx-auto bg-white rounded-2xl p-2 shadow-2xl">
             <div className="flex items-center gap-2 flex-1 w-full">
@@ -119,22 +126,27 @@ export default function Page() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Where do you want to go?"
-                className="flex-1 outline-none text-slate-800 bg-transparent"
-                style={{ fontSize: "0.9375rem" }}
-                onKeyDown={e => e.key === "Enter" && router.push("/create-trip")}
+                className="flex-1 outline-none text-slate-800 bg-transparent text-sm"
+                onKeyDown={e => e.key === "Enter" && router.push("/dashboard")}
               />
             </div>
-            <button onClick={() => router.push("/create-trip")} className="bg-[#2563eb] text-white px-6 py-3 rounded-xl hover:bg-[#1d4ed8] transition-all flex items-center gap-2 w-full sm:w-auto justify-center" style={{ fontWeight: 700 }}>
+            <button onClick={() => router.push("/dashboard")} className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2 w-full sm:w-auto justify-center font-bold">
               Start Planning <ArrowRight className="w-4 h-4" />
             </button>
           </div>
           <div className="flex items-center justify-center gap-8 mt-10">
-            {[["50k+", "Routes Created"], ["195+", "Countries"], ["4.9★", "App Rating"]].map(([val, label]) => (
-              <div key={label} className="text-center">
-                <div className="text-white" style={{ fontWeight: 800, fontSize: "1.5rem" }}>{val}</div>
-                <div className="text-slate-300" style={{ fontSize: "0.8125rem" }}>{label}</div>
-              </div>
-            ))}
+            <div className="text-center">
+              <div className="text-white font-extrabold text-2xl">50k+</div>
+              <div className="text-slate-300 text-xs">Routes Created</div>
+            </div>
+            <div className="text-center">
+              <div className="text-white font-extrabold text-2xl">195+</div>
+              <div className="text-slate-300 text-xs">Countries</div>
+            </div>
+            <div className="text-center">
+              <div className="text-white font-extrabold text-2xl">4.9★</div>
+              <div className="text-slate-300 text-xs">App Rating</div>
+            </div>
           </div>
         </div>
       </section>
@@ -143,18 +155,18 @@ export default function Page() {
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <span className="inline-block bg-blue-50 text-[#2563eb] px-4 py-1.5 rounded-full mb-4" style={{ fontSize: "0.8125rem", fontWeight: 600 }}>FEATURES</span>
-            <h2 className="text-slate-900 mb-4" style={{ fontWeight: 800, fontSize: "2.25rem", letterSpacing: "-0.02em" }}>Everything you need to travel smarter</h2>
-            <p className="text-slate-500 max-w-2xl mx-auto" style={{ fontSize: "1.0625rem" }}>Built for explorers who want more experiences and less planning headaches.</p>
+            <span className="inline-block bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full mb-4 text-xs font-semibold">FEATURES</span>
+            <h2 className="text-slate-900 mb-4 font-extrabold text-4xl tracking-tight">Everything you need to travel smarter</h2>
+            <p className="text-slate-500 max-w-2xl mx-auto text-base">Built for explorers who want more experiences and less planning headaches.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map(({ icon: Icon, title, desc }) => (
               <div key={title} className="p-6 rounded-2xl border border-slate-100 bg-white hover:border-blue-100 hover:shadow-lg transition-all group">
-                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-4 group-hover:bg-[#2563eb] transition-colors">
-                  <Icon className="w-6 h-6 text-[#2563eb] group-hover:text-white transition-colors" />
+                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors">
+                  <Icon className="w-6 h-6 text-blue-600 group-hover:text-white transition-colors" />
                 </div>
-                <h3 className="text-slate-900 mb-2" style={{ fontWeight: 700, fontSize: "1.0625rem" }}>{title}</h3>
-                <p className="text-slate-500" style={{ fontSize: "0.9375rem", lineHeight: 1.6 }}>{desc}</p>
+                <h3 className="text-slate-900 mb-2 font-bold text-base">{title}</h3>
+                <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
@@ -165,25 +177,25 @@ export default function Page() {
       <section className="py-24 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <span className="inline-block bg-teal-50 text-[#14b8a6] px-4 py-1.5 rounded-full mb-4" style={{ fontSize: "0.8125rem", fontWeight: 600 }}>HOW IT WORKS</span>
-            <h2 className="text-slate-900 mb-4" style={{ fontWeight: 800, fontSize: "2.25rem", letterSpacing: "-0.02em" }}>From idea to itinerary in 4 steps</h2>
+            <span className="inline-block bg-teal-50 text-teal-600 px-4 py-1.5 rounded-full mb-4 text-xs font-semibold">HOW IT WORKS</span>
+            <h2 className="text-slate-900 mb-4 font-extrabold text-4xl tracking-tight">From idea to itinerary in 4 steps</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {steps.map((step, i) => (
               <div key={step.num} className="relative">
                 {i < steps.length - 1 && <div className="hidden lg:block absolute top-8 left-full w-full h-px bg-gradient-to-r from-slate-200 to-transparent z-0" />}
                 <div className="relative z-10">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#14b8a6] flex items-center justify-center mb-5 shadow-lg">
-                    <span className="text-white" style={{ fontWeight: 800, fontSize: "1.125rem" }}>{step.num}</span>
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center mb-5 shadow-lg">
+                    <span className="text-white font-extrabold text-lg">{step.num}</span>
                   </div>
-                  <h3 className="text-slate-900 mb-2" style={{ fontWeight: 700, fontSize: "1.0625rem" }}>{step.title}</h3>
-                  <p className="text-slate-500" style={{ fontSize: "0.9375rem", lineHeight: 1.6 }}>{step.desc}</p>
+                  <h3 className="text-slate-900 mb-2 font-bold text-base">{step.title}</h3>
+                  <p className="text-slate-500 text-sm leading-relaxed">{step.desc}</p>
                 </div>
               </div>
             ))}
           </div>
           <div className="text-center mt-12">
-            <button onClick={() => router.push("/create-trip")} className="inline-flex items-center gap-2 bg-[#2563eb] text-white px-8 py-4 rounded-xl hover:bg-[#1d4ed8] transition-all shadow-lg shadow-blue-200" style={{ fontWeight: 700, fontSize: "1rem" }}>
+            <button onClick={() => router.push("/dashboard")} className="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 font-bold">
               Create Your First Trip <ArrowRight className="w-5 h-5" />
             </button>
           </div>
@@ -195,30 +207,30 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between mb-12">
             <div>
-              <span className="inline-block bg-orange-50 text-[#f97316] px-4 py-1.5 rounded-full mb-4" style={{ fontSize: "0.8125rem", fontWeight: 600 }}>DESTINATIONS</span>
-              <h2 className="text-slate-900" style={{ fontWeight: 800, fontSize: "2.25rem", letterSpacing: "-0.02em" }}>Popular destinations</h2>
+              <span className="inline-block bg-orange-50 text-orange-500 px-4 py-1.5 rounded-full mb-4 text-xs font-semibold">DESTINATIONS</span>
+              <h2 className="text-slate-900 font-extrabold text-4xl tracking-tight">Popular destinations</h2>
             </div>
-            <button className="hidden md:flex items-center gap-1 text-[#2563eb] hover:gap-2 transition-all" style={{ fontWeight: 600, fontSize: "0.9375rem" }}>
+            <button className="hidden md:flex items-center gap-1 text-blue-600 hover:gap-2 transition-all font-semibold text-sm">
               View all <ChevronRight className="w-4 h-4" />
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {destinations.map(dest => (
-              <button key={dest.name} onClick={() => router.push("/create-trip")} className="group relative rounded-2xl overflow-hidden aspect-[4/3] text-left w-full">
-                {/* <ImageWithFallback src={dest.image} alt={dest.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" /> */}
+              <button key={dest.name} onClick={() => router.push("/dashboard")} className="group relative rounded-2xl overflow-hidden aspect-[4/3] text-left w-full">
+                <img src={dest.image} alt={dest.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-5">
                   <div className="flex items-end justify-between">
                     <div>
-                      <h3 className="text-white" style={{ fontWeight: 700, fontSize: "1.25rem" }}>{dest.name}</h3>
-                      <p className="text-slate-300" style={{ fontSize: "0.875rem" }}>{dest.country}</p>
+                      <h3 className="text-white font-bold text-xl">{dest.name}</h3>
+                      <p className="text-slate-300 text-sm">{dest.country}</p>
                     </div>
                     <div className="text-right">
                       <div className="flex items-center gap-1 text-yellow-400 justify-end">
                         <Star className="w-3.5 h-3.5 fill-current" />
-                        <span className="text-white" style={{ fontWeight: 700, fontSize: "0.875rem" }}>{dest.rating}</span>
+                        <span className="text-white font-bold text-sm">{dest.rating}</span>
                       </div>
-                      <span className="text-slate-300" style={{ fontSize: "0.75rem" }}>{dest.trips} trips</span>
+                      <span className="text-slate-300 text-xs">{dest.trips} trips</span>
                     </div>
                   </div>
                 </div>
@@ -229,24 +241,24 @@ export default function Page() {
       </section>
 
       {/* TESTIMONIALS */}
-      <section className="py-24 bg-gradient-to-br from-slate-900 to-[#1e3a6e]">
+      <section className="py-24 bg-gradient-to-br from-slate-900 to-blue-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <span className="inline-block bg-blue-500/20 text-blue-300 px-4 py-1.5 rounded-full mb-4" style={{ fontSize: "0.8125rem", fontWeight: 600 }}>TESTIMONIALS</span>
-            <h2 className="text-white mb-4" style={{ fontWeight: 800, fontSize: "2.25rem", letterSpacing: "-0.02em" }}>Loved by travelers worldwide</h2>
+            <span className="inline-block bg-blue-500/20 text-blue-300 px-4 py-1.5 rounded-full mb-4 text-xs font-semibold">TESTIMONIALS</span>
+            <h2 className="text-white mb-4 font-extrabold text-4xl tracking-tight">Loved by travelers worldwide</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {testimonials.map(t => (
-              <div key={t.name} className="bg-white/8 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+              <div key={t.name} className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
                 <div className="flex items-center gap-1 mb-4">
                   {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />)}
                 </div>
-                <p className="text-slate-200 mb-6" style={{ fontSize: "0.9375rem", lineHeight: 1.7 }}>"{t.text}"</p>
+                <p className="text-slate-200 mb-6 text-sm leading-relaxed">"{t.text}"</p>
                 <div className="flex items-center gap-3">
                   <img src={t.avatar} alt={t.name} className="w-10 h-10 rounded-full object-cover" />
                   <div>
-                    <div className="text-white" style={{ fontWeight: 600, fontSize: "0.9375rem" }}>{t.name}</div>
-                    <div className="text-slate-400" style={{ fontSize: "0.8125rem" }}>{t.role}</div>
+                    <div className="text-white font-semibold text-sm">{t.name}</div>
+                    <div className="text-slate-400 text-xs">{t.role}</div>
                   </div>
                 </div>
               </div>
@@ -258,24 +270,31 @@ export default function Page() {
       {/* CTA */}
       <section className="py-24 bg-white">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <div className="bg-gradient-to-br from-[#2563eb] to-[#14b8a6] rounded-3xl p-12 text-white">
-            <h2 className="mb-4" style={{ fontWeight: 800, fontSize: "2.25rem", letterSpacing: "-0.02em" }}>Ready to escape?</h2>
-            <p className="text-blue-100 mb-8" style={{ fontSize: "1.125rem" }}>Join 50,000+ travelers who plan smarter with EscapeRoute.</p>
+          <div className="bg-gradient-to-br from-blue-600 to-teal-500 rounded-3xl p-12 text-white">
+            <h2 className="mb-4 font-extrabold text-4xl tracking-tight">Ready to escape?</h2>
+            <p className="text-blue-100 mb-8 text-lg">Join 50,000+ travelers who plan smarter with EscapeRoute.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button onClick={() => router.push("/signup")} className="bg-white text-[#2563eb] px-8 py-4 rounded-xl hover:shadow-xl transition-all w-full sm:w-auto" style={{ fontWeight: 700, fontSize: "1rem" }}>
-                Start for free
-              </button>
-              <button onClick={() => router.push("/login")} className="border-2 border-white/40 text-white px-8 py-4 rounded-xl hover:border-white transition-all w-full sm:w-auto" style={{ fontWeight: 700, fontSize: "1rem" }}>
-                Sign in
-              </button>
+              // In your landing page, update the buttons:
+                    <button onClick={() => router.push("/login")} className="...">
+                      Sign In
+                    </button>
+                    <button onClick={() => router.push("/signup")} className="...">
+                      Get Started
+                    </button>
             </div>
-            <div className="flex items-center justify-center gap-6 mt-8 text-blue-100">
-              {["Free plan available", "No credit card needed", "Cancel anytime"].map(t => (
-                <div key={t} className="flex items-center gap-1.5">
-                  <CheckCircle className="w-4 h-4" />
-                  <span style={{ fontSize: "0.875rem" }}>{t}</span>
-                </div>
-              ))}
+            <div className="flex items-center justify-center gap-6 mt-8 text-blue-100 text-sm">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4" />
+                <span>Free plan available</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4" />
+                <span>No credit card needed</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4" />
+                <span>Cancel anytime</span>
+              </div>
             </div>
           </div>
         </div>
@@ -284,16 +303,55 @@ export default function Page() {
       {/* FOOTER */}
       <footer className="bg-slate-900 text-slate-400 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-              <img src="/images/logo-removebg-preview.png" alt="EscapeRoute" className="h-15 w-auto" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <img src="/images/logo-removebg-preview.png" alt="EscapeRoute" className="w-30 h-30 object-contain" />
+                {/* <span className="text-white font-bold">EscapeRoute</span> */}
+              </div>
+              <p className="text-sm">Plan smarter, travel better.</p>
             </div>
-            <div className="flex gap-8">
-              {["Privacy", "Terms", "Support", "Blog"].map(l => (
-                <button key={l} className="hover:text-white transition-colors" style={{ fontSize: "0.875rem" }}>{l}</button>
+            <div>
+              <h3 className="text-white font-semibold mb-3 text-sm">Product</h3>
+              <div className="space-y-2">
+                {["Features", "Pricing", "How it Works"].map(l => (
+                  <button key={l} className="block text-sm hover:text-white transition-colors">{l}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3 className="text-white font-semibold mb-3 text-sm">Company</h3>
+              <div className="space-y-2">
+                {["Blog", "Support", "About"].map(l => (
+                  <button key={l} className="block text-sm hover:text-white transition-colors">{l}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3 className="text-white font-semibold mb-3 text-sm">Follow Us</h3>
+              <div className="flex gap-3">
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-blue-600 flex items-center justify-center transition-colors">
+                  <Share2 className="w-4 h-4" />
+                </a>
+                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-blue-600 flex items-center justify-center transition-colors">
+                  <Heart className="w-4 h-4" />
+                </a>
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-pink-600 flex items-center justify-center transition-colors">
+                  <Heart className="w-4 h-4" />
+                </a>
+                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-blue-400 flex items-center justify-center transition-colors">
+                  <MessageCircle className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-sm">© 2026 EscapeRoute. All rights reserved.</p>
+            <div className="flex gap-6">
+              {["Privacy", "Terms"].map(l => (
+                <button key={l} className="text-sm hover:text-white transition-colors">{l}</button>
               ))}
             </div>
-            <p style={{ fontSize: "0.875rem" }}>© 2026 EscapeRoute. All rights reserved.</p>
           </div>
         </div>
       </footer>
