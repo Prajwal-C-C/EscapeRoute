@@ -4,11 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   MapPin, Zap, Star, Users, ArrowRight, CheckCircle,
-  Globe, Route, Clock, Shield, ChevronRight, Menu, X,
-  Phone, Mail, Share2, Heart, MessageCircle, ExternalLink
+  Globe, Route, Clock, Shield, ChevronRight
 } from "lucide-react";
+import { Header } from "@/components/landing/Header";
+import { Footer } from "@/components/landing/Footer";
+import { Modal } from "@/components/ui/Modal";
+import { AuthModal } from "@/components/auth/AuthModal";
 
-const HERO_IMAGE = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1600&h=900&fit=crop&auto=format";
+// Your data constants here...
 const DEST_IMAGES = [
   "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=400&fit=crop&auto=format",
   "https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=600&h=400&fit=crop&auto=format",
@@ -58,54 +61,26 @@ const testimonials = [
   },
 ];
 
+// This is the main component - MAKE SURE it's exported as default
 export default function LandingPage() {
   const router = useRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isLoginMode, setIsLoginMode] = useState(true);
+
+  const openAuthModal = (mode: 'login' | 'signup') => {
+    setIsLoginMode(mode === 'login');
+    setIsAuthModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
-      {/* NAV */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-          <div className="flex items-center gap-2">
-            <img src="/images/logo-removebg-preview.png" alt="EscapeRoute" className="w-25 h-30 object-contain" />
-            {/* <span className="font-bold text-lg text-slate-900">EscapeRoute</span> */}
-          </div>
-          <div className="hidden md:flex items-center gap-8">
-            {["Features", "How it Works", "Destinations", "Pricing"].map(item => (
-              <button key={item} className="text-slate-600 hover:text-blue-600 transition-colors text-sm font-medium">
-                {item}
-              </button>
-            ))}
-          </div>
-          <div className="hidden md:flex items-center gap-3">
-            <button onClick={() => router.push("/dashboard")} className="text-slate-700 hover:text-blue-600 transition-colors text-sm font-semibold">
-              Sign In
-            </button>
-            <button onClick={() => router.push("/dashboard")} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold">
-              Get Started
-            </button>
-          </div>
-          <button className="md:hidden p-2" onClick={() => setMenuOpen(!menuOpen)}>
-            {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-        {menuOpen && (
-          <div className="md:hidden bg-white border-t border-slate-100 px-4 py-4 flex flex-col gap-4">
-            {["Features", "How it Works", "Destinations", "Pricing"].map(item => (
-              <button key={item} className="text-left text-slate-600 font-medium">{item}</button>
-            ))}
-            <button onClick={() => router.push("/dashboard")} className="text-left text-blue-600 font-semibold">Sign In</button>
-            <button onClick={() => router.push("/dashboard")} className="bg-blue-600 text-white px-4 py-2 rounded-lg w-full font-semibold">Get Started</button>
-          </div>
-        )}
-      </nav>
-
-      {/* HERO */}
+      <Header />
+      
+      {/* HERO SECTION */}
       <section className="relative min-h-screen flex items-center justify-center pt-16">
         <div className="absolute inset-0">
-          <img src={HERO_IMAGE} alt="Travel" className="w-full h-full object-cover" />
+          <img src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1600&h=900&fit=crop&auto=format" alt="Travel" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-slate-900/70 via-slate-900/50 to-white" />
         </div>
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center pt-20 pb-32">
@@ -127,32 +102,29 @@ export default function LandingPage() {
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Where do you want to go?"
                 className="flex-1 outline-none text-slate-800 bg-transparent text-sm"
-                onKeyDown={e => e.key === "Enter" && router.push("/dashboard")}
+                onKeyDown={e => e.key === "Enter" && openAuthModal('signup')}
               />
             </div>
-            <button onClick={() => router.push("/dashboard")} className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2 w-full sm:w-auto justify-center font-bold">
+            <button 
+              onClick={() => openAuthModal('signup')} 
+              className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2 w-full sm:w-auto justify-center font-bold"
+            >
               Start Planning <ArrowRight className="w-4 h-4" />
             </button>
           </div>
           <div className="flex items-center justify-center gap-8 mt-10">
-            <div className="text-center">
-              <div className="text-white font-extrabold text-2xl">50k+</div>
-              <div className="text-slate-300 text-xs">Routes Created</div>
-            </div>
-            <div className="text-center">
-              <div className="text-white font-extrabold text-2xl">195+</div>
-              <div className="text-slate-300 text-xs">Countries</div>
-            </div>
-            <div className="text-center">
-              <div className="text-white font-extrabold text-2xl">4.9★</div>
-              <div className="text-slate-300 text-xs">App Rating</div>
-            </div>
+            {[["50k+", "Routes Created"], ["195+", "Countries"], ["4.9★", "App Rating"]].map(([val, label]) => (
+              <div key={label} className="text-center">
+                <div className="text-white font-extrabold text-2xl">{val}</div>
+                <div className="text-slate-300 text-xs">{label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* FEATURES */}
-      <section className="py-24 bg-white">
+      {/* FEATURES SECTION */}
+      <section id="features" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <span className="inline-block bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full mb-4 text-xs font-semibold">FEATURES</span>
@@ -173,8 +145,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
-      <section className="py-24 bg-slate-50">
+      {/* HOW IT WORKS SECTION */}
+      <section id="how-it-works" className="py-24 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <span className="inline-block bg-teal-50 text-teal-600 px-4 py-1.5 rounded-full mb-4 text-xs font-semibold">HOW IT WORKS</span>
@@ -195,15 +167,18 @@ export default function LandingPage() {
             ))}
           </div>
           <div className="text-center mt-12">
-            <button onClick={() => router.push("/dashboard")} className="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 font-bold">
+            <button 
+              onClick={() => openAuthModal('signup')} 
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 font-bold"
+            >
               Create Your First Trip <ArrowRight className="w-5 h-5" />
             </button>
           </div>
         </div>
       </section>
 
-      {/* POPULAR DESTINATIONS */}
-      <section className="py-24 bg-white">
+      {/* POPULAR DESTINATIONS SECTION */}
+      <section id="destinations" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between mb-12">
             <div>
@@ -216,7 +191,11 @@ export default function LandingPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {destinations.map(dest => (
-              <button key={dest.name} onClick={() => router.push("/dashboard")} className="group relative rounded-2xl overflow-hidden aspect-[4/3] text-left w-full">
+              <button 
+                key={dest.name} 
+                onClick={() => openAuthModal('signup')} 
+                className="group relative rounded-2xl overflow-hidden aspect-[4/3] text-left w-full"
+              >
                 <img src={dest.image} alt={dest.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-5">
@@ -240,7 +219,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
+      {/* TESTIMONIALS SECTION */}
       <section className="py-24 bg-gradient-to-br from-slate-900 to-blue-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -267,94 +246,48 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="py-24 bg-white">
+      {/* CTA SECTION */}
+      <section id="pricing" className="py-24 bg-white">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <div className="bg-gradient-to-br from-blue-600 to-teal-500 rounded-3xl p-12 text-white">
             <h2 className="mb-4 font-extrabold text-4xl tracking-tight">Ready to escape?</h2>
             <p className="text-blue-100 mb-8 text-lg">Join 50,000+ travelers who plan smarter with EscapeRoute.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              // In your landing page, update the buttons:
-                    <button onClick={() => router.push("/login")} className="...">
-                      Sign In
-                    </button>
-                    <button onClick={() => router.push("/signup")} className="...">
-                      Get Started
-                    </button>
+              <button 
+                onClick={() => openAuthModal('signup')} 
+                className="bg-white text-blue-600 px-8 py-4 rounded-xl hover:shadow-xl transition-all w-full sm:w-auto font-bold"
+              >
+                Start for free
+              </button>
+              <button 
+                onClick={() => openAuthModal('login')} 
+                className="border-2 border-white/40 text-white px-8 py-4 rounded-xl hover:border-white transition-all w-full sm:w-auto font-bold"
+              >
+                Sign in
+              </button>
             </div>
-            <div className="flex items-center justify-center gap-6 mt-8 text-blue-100 text-sm">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle className="w-4 h-4" />
-                <span>Free plan available</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle className="w-4 h-4" />
-                <span>No credit card needed</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle className="w-4 h-4" />
-                <span>Cancel anytime</span>
-              </div>
+            <div className="flex flex-wrap items-center justify-center gap-6 mt-8 text-blue-100 text-sm">
+              {["Free plan available", "No credit card needed", "Cancel anytime"].map(t => (
+                <div key={t} className="flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>{t}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="bg-slate-900 text-slate-400 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <img src="/images/logo-removebg-preview.png" alt="EscapeRoute" className="w-30 h-30 object-contain" />
-                {/* <span className="text-white font-bold">EscapeRoute</span> */}
-              </div>
-              <p className="text-sm">Plan smarter, travel better.</p>
-            </div>
-            <div>
-              <h3 className="text-white font-semibold mb-3 text-sm">Product</h3>
-              <div className="space-y-2">
-                {["Features", "Pricing", "How it Works"].map(l => (
-                  <button key={l} className="block text-sm hover:text-white transition-colors">{l}</button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h3 className="text-white font-semibold mb-3 text-sm">Company</h3>
-              <div className="space-y-2">
-                {["Blog", "Support", "About"].map(l => (
-                  <button key={l} className="block text-sm hover:text-white transition-colors">{l}</button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h3 className="text-white font-semibold mb-3 text-sm">Follow Us</h3>
-              <div className="flex gap-3">
-                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-blue-600 flex items-center justify-center transition-colors">
-                  <Share2 className="w-4 h-4" />
-                </a>
-                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-blue-600 flex items-center justify-center transition-colors">
-                  <Heart className="w-4 h-4" />
-                </a>
-                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-pink-600 flex items-center justify-center transition-colors">
-                  <Heart className="w-4 h-4" />
-                </a>
-                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-blue-400 flex items-center justify-center transition-colors">
-                  <MessageCircle className="w-4 h-4" />
-                </a>
-              </div>
-            </div>
-          </div>
-          <div className="border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm">© 2026 EscapeRoute. All rights reserved.</p>
-            <div className="flex gap-6">
-              {["Privacy", "Terms"].map(l => (
-                <button key={l} className="text-sm hover:text-white transition-colors">{l}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
+
+      {/* Auth Modal */}
+      <Modal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)}>
+        <AuthModal
+          isLogin={isLoginMode}
+          onClose={() => setIsAuthModalOpen(false)}
+          onToggleMode={() => setIsLoginMode(!isLoginMode)}
+        />
+      </Modal>
     </div>
   );
 }
