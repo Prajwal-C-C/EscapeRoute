@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+}
+
+model ai_recommendations {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trip_id             String?   @db.Uuid
+  recommendation_type String?   @db.VarChar(50)
+  content             Json?
+  created_at          DateTime? @default(now()) @db.Timestamp(6)
+  trips               trips?    @relation(fields: [trip_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model categories {
+  id     Int      @id @default(autoincrement())
+  name   String?  @unique @db.VarChar(100)
+  icon   String?
+  places places[]
+}
+
+model day_stops {
+  id                                                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itinerary_day_id                                   String?          @db.Uuid
+  place_id                                           String?          @db.Uuid
+  stop_order                                         Int?
+  arrival_time                                       DateTime?        @db.Time(6)
+  departure_time                                     DateTime?        @db.Time(6)
+  visit_duration_minutes                             Int?
+  notes                                              String?
+  itinerary_days                                     itinerary_days?  @relation(fields: [itinerary_day_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  places                                             places?          @relation(fields: [place_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  route_segments_route_segments_from_stopToday_stops route_segments[] @relation("route_segments_from_stopToday_stops")
+  route_segments_route_segments_to_stopToday_stops   route_segments[] @relation("route_segments_to_stopToday_stops")
+
+  @@index([itinerary_day_id, stop_order], map: "idx_day_stop_order")
+}
+
+model hotels {
+  place_id       String    @id @db.Uuid
+  stars          Int?
+  check_in_time  DateTime? @db.Time(6)
+  check_out_time DateTime? @db.Time(6)
+  places         places    @relation(fields: [place_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model itineraries {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trip_id              String?          @db.Uuid
+  generated_by         String?          @db.VarChar(50)
+  total_distance       Decimal?         @db.Decimal
+  total_places         Int?
+  total_estimated_time Int?
+  created_at           DateTime?        @default(now()) @db.Timestamp(6)
+  trips                trips?           @relation(fields: [trip_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  itinerary_days       itinerary_days[]
+}
+
+model itinerary_days {
+  id                       String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  itinerary_id             String?      @db.Uuid
+  day_number               Int?
+  planned_distance         Decimal?     @db.Decimal
+  planned_duration_minutes Int?
+  day_stops                day_stops[]
+  itineraries              itineraries? @relation(fields: [itinerary_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model place_images {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  place_id  String? @db.Uuid
+  image_url String?
+  source    String? @db.VarChar(50)
+  places    places? @relation(fields: [place_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model places {
+  id                      String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  osm_id                  BigInt?
+  name                    String?                   @db.VarChar(255)
+  category_id             Int?
+  description             String?
+  address                 String?
+  city                    String?                   @db.VarChar(100)
+  state                   String?                   @db.VarChar(100)
+  country                 String?                   @db.VarChar(100)
+  latitude                Float?
+  longitude               Float?
+  geom                    Unsupported("geography")?
+  rating                  Decimal?                  @db.Decimal(2, 1)
+  total_reviews           Int?
+  opening_hours           Json?
+  estimated_visit_minutes Int?
+  ticket_price            Decimal?                  @db.Decimal
+  phone                   String?                   @db.VarChar(50)
+  website                 String?
+  image_url               String?
+  source                  String?                   @db.VarChar(50)
+  created_at              DateTime?                 @default(now()) @db.Timestamp(6)
+  day_stops               day_stops[]
+  hotels                  hotels?
+  place_images            place_images[]
+  categories              categories?               @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  restaurants             restaurants?
+  reviews                 reviews[]
+  saved_places            saved_places[]
+
+  @@index([category_id], map: "idx_place_category")
+  @@index([rating(sort: Desc)], map: "idx_place_rating")
+  @@index([geom], map: "idx_places_geom", type: Gist)
+}
+
+model restaurants {
+  place_id      String   @id @db.Uuid
+  cuisine_types String[]
+  vegetarian    Boolean?
+  vegan         Boolean?
+  average_cost  Decimal? @db.Decimal
+  places        places   @relation(fields: [place_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model reviews {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String?   @db.Uuid
+  place_id   String?   @db.Uuid
+  rating     Int?
+  comment    String?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  places     places?   @relation(fields: [place_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users      users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model route_segments {
+  id                                            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  from_stop                                     String?    @db.Uuid
+  to_stop                                       String?    @db.Uuid
+  distance_km                                   Decimal?   @db.Decimal
+  travel_time_minutes                           Int?
+  day_stops_route_segments_from_stopToday_stops day_stops? @relation("route_segments_from_stopToday_stops", fields: [from_stop], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  day_stops_route_segments_to_stopToday_stops   day_stops? @relation("route_segments_to_stopToday_stops", fields: [to_stop], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model saved_places {
+  user_id  String    @db.Uuid
+  place_id String    @db.Uuid
+  saved_at DateTime? @default(now()) @db.Timestamp(6)
+  places   places    @relation(fields: [place_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users    users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([user_id, place_id])
+}
+
+model search_history {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String?   @db.Uuid
+  search_query String?
+  searched_at  DateTime? @default(now()) @db.Timestamp(6)
+  users        users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_search_history")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+//@ignore
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+model trips {
+  id                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id              String?              @db.Uuid
+  destination_name     String?              @db.VarChar(255)
+  destination_lat      Float?
+  destination_lng      Float?
+  start_date           DateTime?            @db.Date
+  end_date             DateTime?            @db.Date
+  trip_days            Int?
+  max_distance_per_day Decimal?             @db.Decimal
+  travel_mode          String?              @db.VarChar(30)
+  status               String?              @default("draft") @db.VarChar(30)
+  created_at           DateTime?            @default(now()) @db.Timestamp(6)
+  ai_recommendations   ai_recommendations[]
+  itineraries          itineraries[]
+  users                users?               @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_trip_user")
+}
+
+model user_preferences {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id               String?   @db.Uuid
+  preferred_foods       String[]
+  preferred_categories  String[]
+  budget_level          String?   @db.VarChar(20)
+  travel_style          String?   @db.VarChar(50)
+  max_daily_distance_km Decimal?  @db.Decimal
+  created_at            DateTime? @default(now()) @db.Timestamp(6)
+  users                 users?    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model users {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email            String             @unique @db.VarChar(255)
+  username         String?            @unique @db.VarChar(100)
+  full_name        String?            @db.VarChar(255)
+  profile_picture  String?
+  created_at       DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamp(6)
+  reviews          reviews[]
+  saved_places     saved_places[]
+  search_history   search_history[]
+  trips            trips[]
+  user_preferences user_preferences[]
+}
+
+model weather_cache {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  latitude     Float?
+  longitude    Float?
+  weather_date DateTime? @db.Date
+  weather_data Json?
+  updated_at   DateTime? @default(now()) @db.Timestamp(6)
+}
