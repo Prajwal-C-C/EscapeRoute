@@ -1,15 +1,3 @@
-<<<<<<< HEAD
-import { PlaceholderPage } from "@/components/layout/PlaceholderPage";
-
-export default function CreateTripPage() {
-  return (
-    <PlaceholderPage
-      title="Plan a new trip"
-      description="The trip creation form should collect destination, dates, interests, budget, transport mode, and preferred daily pace."
-    />
-  );
-}
-=======
 "use client";
 
 import { useState, useEffect } from "react";
@@ -682,4 +670,3 @@ export default function CreateTripPage() {
     </div>
   );
 }
->>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
