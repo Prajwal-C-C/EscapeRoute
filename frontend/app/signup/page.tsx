@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { PlaceholderPage } from "@/components/layout/PlaceholderPage";
 
 export default function SignupPage() {
@@ -8,3 +9,10 @@ export default function SignupPage() {
     />
   );
 }
+=======
+// import { AuthForm } from "@/components/auth/AuthForm";
+
+// export default function SignupPage() {
+//   return <AuthForm isLogin={false} />;
+// }
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab

@@ -1,5 +1,6 @@
 "use client";
 
+<<<<<<< HEAD
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -23,6 +24,20 @@ import {
 const HERO_IMAGE =
   "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1600&h=900&fit=crop&auto=format";
 
+=======
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  MapPin, Zap, Star, Users, ArrowRight, CheckCircle,
+  Globe, Route, Clock, Shield, ChevronRight
+} from "lucide-react";
+import { Header } from "@/components/landing/Header";
+import { Footer } from "@/components/landing/Footer";
+import { Modal } from "@/components/ui/Modal";
+import { AuthModal } from "@/components/auth/AuthModal";
+
+// Your data constants here...
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
 const DEST_IMAGES = [
   "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=400&fit=crop&auto=format",
   "https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=600&h=400&fit=crop&auto=format",
@@ -32,6 +47,7 @@ const DEST_IMAGES = [
   "https://images.unsplash.com/photo-1555993539-1732b0258235?w=600&h=400&fit=crop&auto=format",
 ];
 
+<<<<<<< HEAD
 const navLinks = [
   { label: "Features", href: "#features" },
   { label: "How it Works", href: "#how-it-works" },
@@ -39,6 +55,8 @@ const navLinks = [
   { label: "Pricing", href: "#pricing" },
 ];
 
+=======
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
 const destinations = [
   { name: "Santorini", country: "Greece", rating: 4.9, trips: "12.4k", image: DEST_IMAGES[0] },
   { name: "Kyoto", country: "Japan", rating: 4.8, trips: "9.8k", image: DEST_IMAGES[1] },
@@ -54,7 +72,11 @@ const features = [
   { icon: Globe, title: "Smart Discovery", desc: "Automatically uncover hidden gems, landmarks, restaurants, and local favorites." },
   { icon: Clock, title: "Time-Aware Planning", desc: "Respects opening hours, peak times, and your personal daily schedule preferences." },
   { icon: Users, title: "Collaborative Trips", desc: "Plan and share itineraries with friends and family in real time." },
+<<<<<<< HEAD
   { icon: Shield, title: "Offline Access", desc: "Download your itinerary and maps for offline use when you are on the go." },
+=======
+  { icon: Shield, title: "Offline Access", desc: "Download your itinerary and maps for offline use when you're on the go." },
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
 ];
 
 const steps = [
@@ -66,6 +88,7 @@ const steps = [
 
 const testimonials = [
   {
+<<<<<<< HEAD
     name: "Sarah Kim",
     role: "Digital Nomad",
     avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&h=80&fit=crop&auto=format",
@@ -160,11 +183,60 @@ export default function Page() {
             Generate optimized travel itineraries in seconds. Discover attractions, plan routes, and explore the world effortlessly.
           </p>
 
+=======
+    name: "Sarah Kim", role: "Digital Nomad", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&h=80&fit=crop&auto=format",
+    text: "EscapeRoute planned our entire 10-day Japan trip in under 3 minutes. The route optimization saved us hours of back-and-forth travel. Absolutely incredible.",
+  },
+  {
+    name: "Marco Rivera", role: "Travel Blogger", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop&auto=format",
+    text: "The AI recommendations found spots I never would have discovered on my own. Bali trip was a revelation — hidden temples, local warungs, everything perfectly timed.",
+  },
+  {
+    name: "Aisha Patel", role: "Family Traveler", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop&auto=format",
+    text: "Planning a family trip used to take weeks. EscapeRoute made it a 5-minute task. The kids-friendly filtering and restaurant suggestions were spot on.",
+  },
+];
+
+// This is the main component - MAKE SURE it's exported as default
+export default function LandingPage() {
+  const router = useRouter();
+  const [search, setSearch] = useState("");
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isLoginMode, setIsLoginMode] = useState(true);
+
+  const openAuthModal = (mode: 'login' | 'signup') => {
+    setIsLoginMode(mode === 'login');
+    setIsAuthModalOpen(true);
+  };
+
+  return (
+    <div className="min-h-screen bg-white overflow-x-hidden">
+      <Header />
+      
+      {/* HERO SECTION */}
+      <section className="relative min-h-screen flex items-center justify-center pt-16">
+        <div className="absolute inset-0">
+          <img src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1600&h=900&fit=crop&auto=format" alt="Travel" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-900/70 via-slate-900/50 to-white" />
+        </div>
+        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center pt-20 pb-32">
+          <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/25 rounded-full px-4 py-2 mb-6">
+            <Zap className="w-4 h-4 text-orange-500" />
+            <span className="text-white text-sm font-semibold">AI-Powered Travel Planning</span>
+          </div>
+          <h1 className="text-white mb-6 text-5xl md:text-7xl font-extrabold tracking-tight">
+            Plan Smarter.<br />Travel Better.
+          </h1>
+          <p className="text-slate-200 mb-10 max-w-2xl mx-auto text-lg md:text-xl">
+            Generate optimized travel itineraries in seconds. Discover attractions, plan routes, and explore the world effortlessly.
+          </p>
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
           <div className="flex flex-col sm:flex-row items-center gap-3 max-w-xl mx-auto bg-white rounded-2xl p-2 shadow-2xl">
             <div className="flex items-center gap-2 flex-1 w-full">
               <MapPin className="w-5 h-5 text-slate-400 ml-2 flex-shrink-0" />
               <input
                 value={search}
+<<<<<<< HEAD
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Where do you want to go?"
                 className="flex-1 outline-none text-slate-800 bg-transparent text-sm sm:text-base"
@@ -181,12 +253,33 @@ export default function Page() {
               <div key={label} className="text-center">
                 <div className="text-white font-extrabold text-2xl">{val}</div>
                 <div className="text-slate-300 text-xs sm:text-sm">{label}</div>
+=======
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Where do you want to go?"
+                className="flex-1 outline-none text-slate-800 bg-transparent text-sm"
+                onKeyDown={e => e.key === "Enter" && openAuthModal('signup')}
+              />
+            </div>
+            <button 
+              onClick={() => openAuthModal('signup')} 
+              className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-all flex items-center gap-2 w-full sm:w-auto justify-center font-bold"
+            >
+              Start Planning <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex items-center justify-center gap-8 mt-10">
+            {[["50k+", "Routes Created"], ["195+", "Countries"], ["4.9★", "App Rating"]].map(([val, label]) => (
+              <div key={label} className="text-center">
+                <div className="text-white font-extrabold text-2xl">{val}</div>
+                <div className="text-slate-300 text-xs">{label}</div>
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
               </div>
             ))}
           </div>
         </div>
       </section>
 
+<<<<<<< HEAD
       <section id="features" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -203,12 +296,31 @@ export default function Page() {
                 </div>
                 <h3 className="text-slate-900 mb-2 font-bold text-lg">{title}</h3>
                 <p className="text-slate-500 text-sm sm:text-base leading-relaxed">{desc}</p>
+=======
+      {/* FEATURES SECTION */}
+      <section id="features" className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span className="inline-block bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full mb-4 text-xs font-semibold">FEATURES</span>
+            <h2 className="text-slate-900 mb-4 font-extrabold text-4xl tracking-tight">Everything you need to travel smarter</h2>
+            <p className="text-slate-500 max-w-2xl mx-auto text-base">Built for explorers who want more experiences and less planning headaches.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="p-6 rounded-2xl border border-slate-100 bg-white hover:border-blue-100 hover:shadow-lg transition-all group">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors">
+                  <Icon className="w-6 h-6 text-blue-600 group-hover:text-white transition-colors" />
+                </div>
+                <h3 className="text-slate-900 mb-2 font-bold text-base">{title}</h3>
+                <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
               </div>
             ))}
           </div>
         </div>
       </section>
 
+<<<<<<< HEAD
       <section id="how-it-works" className="py-24 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -226,23 +338,55 @@ export default function Page() {
                   </div>
                   <h3 className="text-slate-900 mb-2 font-bold text-lg">{step.title}</h3>
                   <p className="text-slate-500 text-sm sm:text-base leading-relaxed">{step.desc}</p>
+=======
+      {/* HOW IT WORKS SECTION */}
+      <section id="how-it-works" className="py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span className="inline-block bg-teal-50 text-teal-600 px-4 py-1.5 rounded-full mb-4 text-xs font-semibold">HOW IT WORKS</span>
+            <h2 className="text-slate-900 mb-4 font-extrabold text-4xl tracking-tight">From idea to itinerary in 4 steps</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {steps.map((step, i) => (
+              <div key={step.num} className="relative">
+                {i < steps.length - 1 && <div className="hidden lg:block absolute top-8 left-full w-full h-px bg-gradient-to-r from-slate-200 to-transparent z-0" />}
+                <div className="relative z-10">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center mb-5 shadow-lg">
+                    <span className="text-white font-extrabold text-lg">{step.num}</span>
+                  </div>
+                  <h3 className="text-slate-900 mb-2 font-bold text-base">{step.title}</h3>
+                  <p className="text-slate-500 text-sm leading-relaxed">{step.desc}</p>
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
                 </div>
               </div>
             ))}
           </div>
+<<<<<<< HEAD
 
           <div className="text-center mt-12">
             <button onClick={startPlanning} className="inline-flex items-center gap-2 bg-[#2563eb] text-white px-8 py-4 rounded-xl hover:bg-[#1d4ed8] transition-all shadow-lg shadow-blue-200 font-bold">
+=======
+          <div className="text-center mt-12">
+            <button 
+              onClick={() => openAuthModal('signup')} 
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 font-bold"
+            >
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
               Create Your First Trip <ArrowRight className="w-5 h-5" />
             </button>
           </div>
         </div>
       </section>
 
+<<<<<<< HEAD
+=======
+      {/* POPULAR DESTINATIONS SECTION */}
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
       <section id="destinations" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between mb-12">
             <div>
+<<<<<<< HEAD
               <span className="inline-block bg-orange-50 text-[#f97316] px-4 py-1.5 rounded-full mb-4 text-xs font-semibold">DESTINATIONS</span>
               <h2 className="text-slate-900 font-extrabold text-3xl sm:text-4xl">Popular destinations</h2>
             </div>
@@ -255,6 +399,23 @@ export default function Page() {
             {destinations.map((dest) => (
               <button key={dest.name} onClick={startPlanning} className="group relative rounded-2xl overflow-hidden aspect-[4/3] text-left w-full">
                 <Image src={dest.image} alt={dest.name} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
+=======
+              <span className="inline-block bg-orange-50 text-orange-500 px-4 py-1.5 rounded-full mb-4 text-xs font-semibold">DESTINATIONS</span>
+              <h2 className="text-slate-900 font-extrabold text-4xl tracking-tight">Popular destinations</h2>
+            </div>
+            <button className="hidden md:flex items-center gap-1 text-blue-600 hover:gap-2 transition-all font-semibold text-sm">
+              View all <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {destinations.map(dest => (
+              <button 
+                key={dest.name} 
+                onClick={() => openAuthModal('signup')} 
+                className="group relative rounded-2xl overflow-hidden aspect-[4/3] text-left w-full"
+              >
+                <img src={dest.image} alt={dest.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-5">
                   <div className="flex items-end justify-between">
@@ -277,6 +438,7 @@ export default function Page() {
         </div>
       </section>
 
+<<<<<<< HEAD
       <section className="py-24 bg-gradient-to-br from-slate-900 to-[#1e3a6e]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -298,6 +460,27 @@ export default function Page() {
                   <div>
                     <div className="text-white font-semibold text-sm sm:text-base">{testimonial.name}</div>
                     <div className="text-slate-400 text-xs sm:text-sm">{testimonial.role}</div>
+=======
+      {/* TESTIMONIALS SECTION */}
+      <section className="py-24 bg-gradient-to-br from-slate-900 to-blue-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span className="inline-block bg-blue-500/20 text-blue-300 px-4 py-1.5 rounded-full mb-4 text-xs font-semibold">TESTIMONIALS</span>
+            <h2 className="text-white mb-4 font-extrabold text-4xl tracking-tight">Loved by travelers worldwide</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {testimonials.map(t => (
+              <div key={t.name} className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="flex items-center gap-1 mb-4">
+                  {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />)}
+                </div>
+                <p className="text-slate-200 mb-6 text-sm leading-relaxed">"{t.text}"</p>
+                <div className="flex items-center gap-3">
+                  <img src={t.avatar} alt={t.name} className="w-10 h-10 rounded-full object-cover" />
+                  <div>
+                    <div className="text-white font-semibold text-sm">{t.name}</div>
+                    <div className="text-slate-400 text-xs">{t.role}</div>
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
                   </div>
                 </div>
               </div>
@@ -306,6 +489,7 @@ export default function Page() {
         </div>
       </section>
 
+<<<<<<< HEAD
       <section id="pricing" className="py-24 bg-white">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <div className="bg-gradient-to-br from-[#2563eb] to-[#14b8a6] rounded-3xl p-8 sm:p-12 text-white">
@@ -324,6 +508,33 @@ export default function Page() {
                 <div key={item} className="flex items-center gap-1.5">
                   <CheckCircle className="w-4 h-4" />
                   <span className="text-sm">{item}</span>
+=======
+      {/* CTA SECTION */}
+      <section id="pricing" className="py-24 bg-white">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <div className="bg-gradient-to-br from-blue-600 to-teal-500 rounded-3xl p-12 text-white">
+            <h2 className="mb-4 font-extrabold text-4xl tracking-tight">Ready to escape?</h2>
+            <p className="text-blue-100 mb-8 text-lg">Join 50,000+ travelers who plan smarter with EscapeRoute.</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button 
+                onClick={() => openAuthModal('signup')} 
+                className="bg-white text-blue-600 px-8 py-4 rounded-xl hover:shadow-xl transition-all w-full sm:w-auto font-bold"
+              >
+                Start for free
+              </button>
+              <button 
+                onClick={() => openAuthModal('login')} 
+                className="border-2 border-white/40 text-white px-8 py-4 rounded-xl hover:border-white transition-all w-full sm:w-auto font-bold"
+              >
+                Sign in
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-6 mt-8 text-blue-100 text-sm">
+              {["Free plan available", "No credit card needed", "Cancel anytime"].map(t => (
+                <div key={t} className="flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>{t}</span>
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
                 </div>
               ))}
             </div>
@@ -331,6 +542,7 @@ export default function Page() {
         </div>
       </section>
 
+<<<<<<< HEAD
       <footer className="bg-slate-900 text-slate-400 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -346,6 +558,18 @@ export default function Page() {
           </div>
         </div>
       </footer>
+=======
+      <Footer />
+
+      {/* Auth Modal */}
+      <Modal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)}>
+        <AuthModal
+          isLogin={isLoginMode}
+          onClose={() => setIsAuthModalOpen(false)}
+          onToggleMode={() => setIsLoginMode(!isLoginMode)}
+        />
+      </Modal>
+>>>>>>> 6f35ad2d354bde8b0058faed3b05219f77f902ab
     </div>
   );
 }
