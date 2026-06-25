@@ -1,27 +1,27 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Compass, ArrowRight, ArrowLeft, Sparkles, MapPin, Calendar, Wallet, Zap,
   CheckCircle2, Sun, Moon, Coffee, Plane, Train, Car, Bike,
   Globe, Mountain, Utensils, Camera, Leaf, Heart, Star, Waves,
   Building2, ShoppingBag, Music, TrendingUp, Clock, Users,
-  Search, Edit3, DollarSign, CalendarDays, User, Hash
+  Search, Edit3, Hash, Map, Route, Locate, Navigation,
+  CalendarDays, Users2, DollarSign, GitBranch, ArrowLeftRight,
+  CircleDot, Circle, X, Loader2
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface Destination {
+interface Location {
   id: string;
   name: string;
   country: string;
-  emoji: string;
-  image: string;
-  temp: string;
-  cost: string;
-  season: string;
-  trending?: boolean;
+  state?: string;
+  city?: string;
+  lat?: number;
+  lng?: number;
 }
 
 interface Interest {
@@ -29,7 +29,6 @@ interface Interest {
   label: string;
   icon: React.ReactNode;
   gradient: string;
-  image: string;
 }
 
 interface TravelStyle {
@@ -39,10 +38,12 @@ interface TravelStyle {
   icon: React.ReactNode;
 }
 
-type Step = "destination" | "details" | "interests" | "style" | "review";
+type TripType = "one-way" | "round-trip";
+type Step = "trip-type" | "destination" | "details" | "interests" | "style" | "review";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STEPS: { id: Step; label: string; icon: React.ReactNode }[] = [
+  { id: "trip-type", label: "Trip Type", icon: <ArrowLeftRight className="w-4 h-4" /> },
   { id: "destination", label: "Destination", icon: <MapPin className="w-4 h-4" /> },
   { id: "details", label: "Details", icon: <Calendar className="w-4 h-4" /> },
   { id: "interests", label: "Interests", icon: <Heart className="w-4 h-4" /> },
@@ -50,26 +51,17 @@ const STEPS: { id: Step; label: string; icon: React.ReactNode }[] = [
   { id: "review", label: "Review", icon: <Sparkles className="w-4 h-4" /> },
 ];
 
-const DESTINATIONS: Destination[] = [
-  { id: "bali", name: "Bali", country: "Indonesia", emoji: "🇮🇩", image: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&q=80", temp: "28°C", cost: "$$", season: "Apr–Oct", trending: true },
-  { id: "kyoto", name: "Kyoto", country: "Japan", emoji: "🇯🇵", image: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400&q=80", temp: "18°C", cost: "$$$", season: "Mar–May" },
-  { id: "santorini", name: "Santorini", country: "Greece", emoji: "🇬🇷", image: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=400&q=80", temp: "25°C", cost: "$$$", season: "Jun–Sep", trending: true },
-  { id: "dubai", name: "Dubai", country: "UAE", emoji: "🇦🇪", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&q=80", temp: "22°C", cost: "$$$$", season: "Nov–Mar" },
-  { id: "maldives", name: "Maldives", country: "Maldives", emoji: "🇲🇻", image: "https://images.unsplash.com/photo-1573843981267-be1999ff37cd?w=400&q=80", temp: "30°C", cost: "$$$$", season: "Nov–Apr", trending: true },
-  { id: "paris", name: "Paris", country: "France", emoji: "🇫🇷", image: "https://images.unsplash.com/photo-1431274172761-fcdab704a698?w=400&q=80", temp: "15°C", cost: "$$$", season: "Apr–Jun" },
-];
-
 const INTERESTS: Interest[] = [
-  { id: "nature", label: "Nature", icon: <Leaf className="w-6 h-6" />, gradient: "from-emerald-500 to-green-700", image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&q=80" },
-  { id: "adventure", label: "Adventure", icon: <Mountain className="w-6 h-6" />, gradient: "from-orange-500 to-red-600", image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&q=80" },
-  { id: "food", label: "Food", icon: <Utensils className="w-6 h-6" />, gradient: "from-amber-500 to-orange-600", image: "https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=400&q=80" },
-  { id: "culture", label: "Culture", icon: <Globe className="w-6 h-6" />, gradient: "from-violet-500 to-purple-700", image: "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400&q=80" },
-  { id: "photography", label: "Photography", icon: <Camera className="w-6 h-6" />, gradient: "from-blue-500 to-cyan-600", image: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=400&q=80" },
-  { id: "nightlife", label: "Nightlife", icon: <Music className="w-6 h-6" />, gradient: "from-indigo-600 to-purple-800", image: "https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?w=400&q=80" },
-  { id: "shopping", label: "Shopping", icon: <ShoppingBag className="w-6 h-6" />, gradient: "from-pink-500 to-rose-600", image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=400&q=80" },
-  { id: "wellness", label: "Wellness", icon: <Heart className="w-6 h-6" />, gradient: "from-teal-500 to-cyan-600", image: "https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=400&q=80" },
-  { id: "luxury", label: "Luxury", icon: <Star className="w-6 h-6" />, gradient: "from-yellow-500 to-amber-600", image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&q=80" },
-  { id: "beaches", label: "Beaches", icon: <Waves className="w-6 h-6" />, gradient: "from-sky-500 to-blue-600", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80" },
+  { id: "nature", label: "Nature", icon: <Leaf className="w-6 h-6" />, gradient: "from-emerald-500 to-green-700" },
+  { id: "adventure", label: "Adventure", icon: <Mountain className="w-6 h-6" />, gradient: "from-orange-500 to-red-600" },
+  { id: "food", label: "Food", icon: <Utensils className="w-6 h-6" />, gradient: "from-amber-500 to-orange-600" },
+  { id: "culture", label: "Culture", icon: <Globe className="w-6 h-6" />, gradient: "from-violet-500 to-purple-700" },
+  { id: "photography", label: "Photography", icon: <Camera className="w-6 h-6" />, gradient: "from-blue-500 to-cyan-600" },
+  { id: "nightlife", label: "Nightlife", icon: <Music className="w-6 h-6" />, gradient: "from-indigo-600 to-purple-800" },
+  { id: "shopping", label: "Shopping", icon: <ShoppingBag className="w-6 h-6" />, gradient: "from-pink-500 to-rose-600" },
+  { id: "wellness", label: "Wellness", icon: <Heart className="w-6 h-6" />, gradient: "from-teal-500 to-cyan-600" },
+  { id: "luxury", label: "Luxury", icon: <Star className="w-6 h-6" />, gradient: "from-yellow-500 to-amber-600" },
+  { id: "beaches", label: "Beaches", icon: <Waves className="w-6 h-6" />, gradient: "from-sky-500 to-blue-600" },
 ];
 
 const TRANSPORT_OPTIONS: TravelStyle[] = [
@@ -92,10 +84,10 @@ const WAKE_OPTIONS: TravelStyle[] = [
 ];
 
 const BUDGET_LEVELS = [
-  { id: "economy", label: "Economy", daily: "$50–100", accom: "Hostels & budget hotels", icon: "🎒" },
-  { id: "comfort", label: "Comfort", daily: "$150–250", accom: "3–4★ hotels", icon: "🏨" },
-  { id: "premium", label: "Premium", daily: "$300–500", accom: "4–5★ boutique", icon: "💎" },
-  { id: "luxury", label: "Luxury", daily: "$600+", accom: "Villas & 5★ resorts", icon: "👑" },
+  { id: "budget", label: "Budget", daily: "$50–100", accom: "Hostels & budget hotels" },
+  { id: "comfort", label: "Comfort", daily: "$150–250", accom: "3–4★ hotels" },
+  { id: "premium", label: "Premium", daily: "$300–500", accom: "4–5★ boutique" },
+  { id: "luxury", label: "Luxury", daily: "$600+", accom: "Villas & 5★ resorts" },
 ];
 
 // ─── Step Progress ──────────────────────────────────────────────────────────
@@ -137,25 +129,220 @@ function StepProgress({ current, onStepClick }: { current: Step; onStepClick: (s
   );
 }
 
-// ─── Step 1: Destination ──────────────────────────────────────────────────────
-function DestinationStep({ onSelect }: { onSelect: (d: Destination) => void }) {
-  const [selected, setSelected] = useState<Destination | null>(null);
-  const [manualDestination, setManualDestination] = useState("");
-  const [showManualInput, setShowManualInput] = useState(false);
+// ─── Location Search Component ──────────────────────────────────────────────
+function LocationSearch({ 
+  label, 
+  placeholder, 
+  value, 
+  onChange, 
+  onSelect,
+  icon 
+}: { 
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (val: string) => void;
+  onSelect: (location: Location) => void;
+  icon: React.ReactNode;
+}) {
+  const [suggestions, setSuggestions] = useState<Location[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  const handleManualSubmit = () => {
-    if (manualDestination.trim()) {
-      const customDestination: Destination = {
-        id: "custom",
-        name: manualDestination.trim(),
-        country: "Custom",
-        emoji: "📍",
-        image: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&q=80",
-        temp: "--",
-        cost: "--",
-        season: "All year",
-      };
-      onSelect(customDestination);
+  // Mock search - In production, use a real geocoding API
+  const searchLocations = async (query: string) => {
+    if (!query.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    setIsLoading(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const mockResults: Location[] = [
+      { id: "1", name: "New York, USA", country: "USA", state: "New York", city: "New York" },
+      { id: "2", name: "Los Angeles, USA", country: "USA", state: "California", city: "Los Angeles" },
+      { id: "3", name: "London, UK", country: "UK", state: "England", city: "London" },
+      { id: "4", name: "Tokyo, Japan", country: "Japan", state: "Tokyo", city: "Tokyo" },
+      { id: "5", name: "Paris, France", country: "France", state: "Île-de-France", city: "Paris" },
+    ];
+
+    const filtered = mockResults.filter(loc => 
+      loc.name.toLowerCase().includes(query.toLowerCase()) ||
+      loc.city?.toLowerCase().includes(query.toLowerCase()) ||
+      loc.country.toLowerCase().includes(query.toLowerCase())
+    );
+
+    setSuggestions(filtered);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      if (value) {
+        searchLocations(value);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={suggestionsRef}>
+      <label className="block text-slate-700 text-sm font-semibold mb-2">{label}</label>
+      <div className="relative">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+          {icon}
+        </div>
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setShowSuggestions(true);
+          }}
+          onFocus={() => setShowSuggestions(true)}
+          placeholder={placeholder}
+          className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-slate-200 focus:border-[#27788e] focus:ring-2 focus:ring-[#27788e]/20 outline-none transition-all"
+        />
+        {isLoading && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
+          </div>
+        )}
+      </div>
+
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden max-h-60 overflow-y-auto">
+          {suggestions.map((loc) => (
+            <button
+              key={loc.id}
+              onClick={() => {
+                onSelect(loc);
+                onChange(loc.name);
+                setShowSuggestions(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left"
+            >
+              <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">{loc.name}</p>
+                <p className="text-xs text-slate-400">{loc.country}</p>
+              </div>
+              <div className="text-xs text-slate-400">
+                {loc.city}, {loc.state}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Step 1: Trip Type ──────────────────────────────────────────────────────
+function TripTypeStep({ onContinue }: { onContinue: (type: TripType) => void }) {
+  const [tripType, setTripType] = useState<TripType>("one-way");
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.4 }}
+      className="space-y-6"
+    >
+      <div className="text-center">
+        <h2 className="text-2xl md:text-3xl font-bold text-[#1e355c]">Trip Type</h2>
+        <p className="text-slate-500 mt-1">Choose your travel style</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button
+          onClick={() => setTripType("one-way")}
+          className={`p-6 rounded-2xl border-2 text-center transition-all ${
+            tripType === "one-way"
+              ? "border-[#27788e] bg-[#27788e]/5 shadow-lg"
+              : "border-slate-200 hover:border-slate-300"
+          }`}
+        >
+          <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3">
+            <ArrowRight className="w-7 h-7 text-blue-600" />
+          </div>
+          <h3 className="font-bold text-[#1e355c] text-lg">One Way</h3>
+          <p className="text-slate-500 text-sm mt-1">Single destination trip</p>
+          {tripType === "one-way" && (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-[#27788e] text-white rounded-full text-xs font-medium">
+              <CheckCircle2 className="w-3 h-3" />
+              Selected
+            </div>
+          )}
+        </button>
+
+        <button
+          onClick={() => setTripType("round-trip")}
+          className={`p-6 rounded-2xl border-2 text-center transition-all ${
+            tripType === "round-trip"
+              ? "border-[#27788e] bg-[#27788e]/5 shadow-lg"
+              : "border-slate-200 hover:border-slate-300"
+          }`}
+        >
+          <div className="w-14 h-14 rounded-full bg-teal-50 flex items-center justify-center mx-auto mb-3">
+            <ArrowLeftRight className="w-7 h-7 text-teal-600" />
+          </div>
+          <h3 className="font-bold text-[#1e355c] text-lg">Round Trip</h3>
+          <p className="text-slate-500 text-sm mt-1">Return to starting point</p>
+          {tripType === "round-trip" && (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-[#27788e] text-white rounded-full text-xs font-medium">
+              <CheckCircle2 className="w-3 h-3" />
+              Selected
+            </div>
+          )}
+        </button>
+      </div>
+
+      <button
+        onClick={() => onContinue(tripType)}
+        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+      >
+        Continue <ArrowRight className="w-4 h-4" />
+      </button>
+    </motion.div>
+  );
+}
+
+// ─── Step 2: Destination ──────────────────────────────────────────────────────
+// ─── Step 2: Destination ──────────────────────────────────────────────────────
+function DestinationStep({ 
+  onContinue,
+  tripType 
+}: { 
+  onContinue: (data: { from: Location | null; to: Location | null }) => void;
+  tripType: TripType;
+}) {
+  const [fromLocation, setFromLocation] = useState<Location | null>(null);
+  const [toLocation, setToLocation] = useState<Location | null>(null);
+  const [fromQuery, setFromQuery] = useState("");
+  const [toQuery, setToQuery] = useState("");
+
+  const handleContinue = () => {
+    // Only proceed if both locations are selected
+    if (fromLocation && toLocation) {
+      onContinue({ from: fromLocation, to: toLocation });
     }
   };
 
@@ -168,129 +355,109 @@ function DestinationStep({ onSelect }: { onSelect: (d: Destination) => void }) {
       className="space-y-6"
     >
       <div className="text-center">
-        <h2 className="text-2xl md:text-3xl font-bold text-[#1e355c]">Where to?</h2>
-        <p className="text-slate-500 mt-1">Pick a destination or enter manually</p>
+        <h2 className="text-2xl md:text-3xl font-bold text-[#1e355c]">Route Details</h2>
+        <p className="text-slate-500 mt-1">Enter your {tripType === "round-trip" ? "round trip" : "one way"} route</p>
       </div>
 
-      {/* Manual Input Toggle */}
-      <div className="flex items-center justify-center gap-4">
-        <button
-          onClick={() => setShowManualInput(false)}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-            !showManualInput ? "bg-[#1e355c] text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4" />
-            Quick Picks
+      <div className="space-y-4">
+        {/* From Location */}
+        <div className="relative">
+          <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center z-10">
+            <CircleDot className="w-3.5 h-3.5 text-white" />
           </div>
-        </button>
-        <button
-          onClick={() => setShowManualInput(true)}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-            showManualInput ? "bg-[#1e355c] text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Edit3 className="w-4 h-4" />
-            Enter Manually
-          </div>
-        </button>
-      </div>
-
-      {showManualInput ? (
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="text"
-              value={manualDestination}
-              onChange={(e) => setManualDestination(e.target.value)}
-              placeholder="Enter destination name..."
-              className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-slate-200 focus:border-[#27788e] focus:ring-2 focus:ring-[#27788e]/20 outline-none transition-all text-lg"
-              onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
+          <div className="pl-6">
+            <LocationSearch
+              label="From"
+              placeholder="Enter origin location..."
+              value={fromQuery}
+              onChange={setFromQuery}
+              onSelect={(loc) => {
+                setFromLocation(loc);
+                setFromQuery(loc.name);
+              }}
+              icon={<Navigation className="w-4 h-4" />}
             />
           </div>
-          <button
-            onClick={handleManualSubmit}
-            disabled={!manualDestination.trim()}
-            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
-          >
-            Continue with {manualDestination || "Destination"}
-          </button>
         </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {DESTINATIONS.map((d) => {
-              const isSelected = selected?.id === d.id;
-              return (
-                <motion.button
-                  key={d.id}
-                  whileHover={{ y: -4, scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => setSelected(d)}
-                  className={`relative overflow-hidden rounded-2xl aspect-[3/4] text-left transition-all
-                    ${isSelected ? "ring-2 ring-[#14b8a6] ring-offset-2 shadow-lg" : "hover:shadow-lg"}`}
-                >
-                  <img src={d.image} alt={d.name} className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  {d.trending && (
-                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-[#14b8a6] rounded-full text-[9px] font-bold text-white uppercase">
-                      Trending
-                    </div>
-                  )}
-                  {isSelected && (
-                    <div className="absolute top-2 right-2 w-6 h-6 bg-[#14b8a6] rounded-full flex items-center justify-center shadow-lg">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                    </div>
-                  )}
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm">{d.emoji}</span>
-                      <span className="text-white font-bold text-sm">{d.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-white/70 text-[10px]">
-                      <span>{d.temp}</span>
-                      <span className="w-px h-2 bg-white/30" />
-                      <span>{d.cost}/day</span>
-                    </div>
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
 
-          <button
-            disabled={!selected}
-            onClick={() => selected && onSelect(selected)}
-            className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold transition-all
-              ${selected
-                ? "bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white shadow-lg hover:shadow-xl"
-                : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
-          >
-            Continue <ArrowRight className="w-4 h-4" />
-          </button>
-        </>
-      )}
+        {/* To Location */}
+        <div className="relative">
+          <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center z-10">
+            <Circle className="w-3.5 h-3.5 text-white" />
+          </div>
+          <div className="pl-6">
+            <LocationSearch
+              label="To"
+              placeholder="Enter destination..."
+              value={toQuery}
+              onChange={setToQuery}
+              onSelect={(loc) => {
+                setToLocation(loc);
+                setToQuery(loc.name);
+              }}
+              icon={<MapPin className="w-4 h-4" />}
+            />
+          </div>
+        </div>
+
+        {/* Swap Button */}
+        <button
+          onClick={() => {
+            const tempLoc = fromLocation;
+            const tempQuery = fromQuery;
+            setFromLocation(toLocation);
+            setFromQuery(toQuery);
+            setToLocation(tempLoc);
+            setToQuery(tempQuery);
+          }}
+          disabled={!fromLocation && !toLocation}
+          className={`flex items-center justify-center gap-2 w-full py-2 transition-colors ${
+            fromLocation && toLocation 
+              ? "text-slate-500 hover:text-[#27788e] cursor-pointer" 
+              : "text-slate-300 cursor-not-allowed"
+          }`}
+        >
+          <ArrowLeftRight className="w-4 h-4" />
+          <span className="text-sm font-medium">Swap Locations</span>
+        </button>
+      </div>
+
+      <button
+        disabled={!fromLocation || !toLocation}
+        onClick={handleContinue}
+        className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold transition-all
+          ${fromLocation && toLocation
+            ? "bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white shadow-lg hover:shadow-xl"
+            : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
+      >
+        Continue <ArrowRight className="w-4 h-4" />
+      </button>
     </motion.div>
   );
 }
 
-// ─── Step 2: Details ──────────────────────────────────────────────────────────
-function DetailsStep({ onContinue }: { onContinue: (d: { duration: number; budget: string }) => void }) {
-  const [duration, setDuration] = useState(7);
+// ─── Step 3: Details ──────────────────────────────────────────────────────────
+function DetailsStep({ onContinue }: { onContinue: (d: { 
+  startDate: string; 
+  endDate: string; 
+  duration: number; 
+  budget: string;
+  isOneDayTrip: boolean;
+}) => void }) {
+  const today = new Date().toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState("");
+  const [duration, setDuration] = useState(1);
   const [budget, setBudget] = useState("comfort");
-  const [manualDuration, setManualDuration] = useState("");
-  const [showManualInput, setShowManualInput] = useState(false);
+  const [isOneDayTrip, setIsOneDayTrip] = useState(false);
 
-  const handleManualSubmit = () => {
-    const days = parseInt(manualDuration);
-    if (!isNaN(days) && days > 0) {
-      setDuration(days);
-      onContinue({ duration: days, budget });
+  useEffect(() => {
+    if (startDate && !endDate) {
+      const start = new Date(startDate);
+      start.setDate(start.getDate() + duration);
+      setEndDate(start.toISOString().split('T')[0]);
     }
-  };
+  }, [duration, startDate]);
 
   return (
     <motion.div
@@ -305,101 +472,112 @@ function DetailsStep({ onContinue }: { onContinue: (d: { duration: number; budge
         <p className="text-slate-500 mt-1">Set your travel preferences</p>
       </div>
 
-      {/* Duration */}
-      <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-[#1e355c]">Duration</h3>
-          <div className="text-3xl font-black text-[#1e355c]">
-            {duration}<span className="text-base font-medium text-slate-400 ml-1">days</span>
+      <div className="space-y-4">
+        {/* One Day Trip Toggle */}
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="flex items-center gap-3">
+            <Clock className="w-5 h-5 text-[#27788e]" />
+            <div>
+              <p className="font-semibold text-slate-700 text-sm">1 Day Trip</p>
+              <p className="text-slate-400 text-xs">Short excursion or day trip</p>
+            </div>
           </div>
-        </div>
-
-        <div className="flex gap-2 mb-3">
           <button
-            onClick={() => setShowManualInput(false)}
-            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
-              !showManualInput ? "bg-[#1e355c] text-white" : "bg-slate-100 text-slate-600"
+            onClick={() => setIsOneDayTrip(!isOneDayTrip)}
+            className={`relative w-12 h-6 rounded-full transition-all ${
+              isOneDayTrip ? "bg-[#27788e]" : "bg-slate-300"
             }`}
           >
-            Quick Select
-          </button>
-          <button
-            onClick={() => setShowManualInput(true)}
-            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
-              showManualInput ? "bg-[#1e355c] text-white" : "bg-slate-100 text-slate-600"
-            }`}
-          >
-            Custom
+            <div
+              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${
+                isOneDayTrip ? "right-0.5" : "left-0.5"
+              }`}
+            />
           </button>
         </div>
 
-        {showManualInput ? (
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        {!isOneDayTrip && (
+          <>
+            {/* Duration */}
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-[#1e355c]">Duration</h3>
+                <div className="text-2xl font-black text-[#1e355c]">
+                  {duration}<span className="text-base font-medium text-slate-400 ml-1">days</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[1, 3, 5, 7, 10, 14].map(d => (
+                  <button
+                    key={d}
+                    onClick={() => setDuration(d)}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all
+                      ${duration === d
+                        ? "bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white shadow-md"
+                        : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
+                  >
+                    {d} days
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Dates */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-slate-700 text-sm font-semibold mb-2">Start Date</label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
-                type="number"
-                min="1"
-                max="30"
-                value={manualDuration}
-                onChange={(e) => setManualDuration(e.target.value)}
-                placeholder="Enter days..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-[#27788e] outline-none transition-all"
-                onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full pl-10 pr-3 py-3 rounded-xl border-2 border-slate-200 focus:border-[#27788e] focus:ring-2 focus:ring-[#27788e]/20 outline-none transition-all"
               />
             </div>
-            <button
-              onClick={handleManualSubmit}
-              disabled={!manualDuration || parseInt(manualDuration) <= 0}
-              className="px-6 py-2.5 rounded-xl bg-[#1e355c] text-white font-semibold disabled:opacity-50 hover:shadow-lg transition-all"
-            >
-              Set
-            </button>
           </div>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {[3, 5, 7, 10, 14].map(d => (
-              <button
-                key={d}
-                onClick={() => setDuration(d)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all
-                  ${duration === d
-                    ? "bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white shadow-md"
-                    : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
-              >
-                {d} days
-              </button>
-            ))}
+          <div>
+            <label className="block text-slate-700 text-sm font-semibold mb-2">End Date</label>
+            <div className="relative">
+              <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full pl-10 pr-3 py-3 rounded-xl border-2 border-slate-200 focus:border-[#27788e] focus:ring-2 focus:ring-[#27788e]/20 outline-none transition-all"
+              />
+            </div>
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Budget */}
-      <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-        <h3 className="font-semibold text-[#1e355c] mb-4">Budget</h3>
-        <div className="grid grid-cols-2 gap-2">
-          {BUDGET_LEVELS.map((b) => {
-            const active = budget === b.id;
-            return (
-              <button
-                key={b.id}
-                onClick={() => setBudget(b.id)}
-                className={`p-4 rounded-xl text-left transition-all border-2
-                  ${active
-                    ? "border-[#14b8a6] bg-teal-50/50 shadow-md"
-                    : "border-slate-100 hover:border-slate-200"}`}
-              >
-                <div className="text-2xl mb-1">{b.icon}</div>
-                <div className={`font-semibold text-sm ${active ? "text-[#1e355c]" : "text-slate-600"}`}>{b.label}</div>
-                <div className="text-[#14b8a6] font-semibold text-xs">{b.daily}</div>
-              </button>
-            );
-          })}
+        {/* Budget */}
+        <div>
+          <h3 className="font-semibold text-[#1e355c] mb-3">Budget</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {BUDGET_LEVELS.map((b) => {
+              const active = budget === b.id;
+              return (
+                <button
+                  key={b.id}
+                  onClick={() => setBudget(b.id)}
+                  className={`p-3 rounded-xl text-left transition-all border-2
+                    ${active
+                      ? "border-[#14b8a6] bg-teal-50/50 shadow-md"
+                      : "border-slate-100 hover:border-slate-200"}`}
+                >
+                  <div className={`font-semibold text-sm ${active ? "text-[#1e355c]" : "text-slate-600"}`}>{b.label}</div>
+                  <div className="text-[#14b8a6] font-semibold text-xs">{b.daily}</div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       <button
-        onClick={() => onContinue({ duration, budget })}
+        onClick={() => onContinue({ startDate, endDate, duration: isOneDayTrip ? 1 : duration, budget, isOneDayTrip })}
         className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white font-semibold shadow-lg hover:shadow-xl transition-all"
       >
         Continue <ArrowRight className="w-4 h-4" />
@@ -408,7 +586,7 @@ function DetailsStep({ onContinue }: { onContinue: (d: { duration: number; budge
   );
 }
 
-// ─── Step 3: Interests ────────────────────────────────────────────────────────
+// ─── Step 4: Interests ────────────────────────────────────────────────────────
 function InterestsStep({ onContinue }: { onContinue: (interests: string[]) => void }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [manualInterest, setManualInterest] = useState("");
@@ -422,11 +600,6 @@ function InterestsStep({ onContinue }: { onContinue: (interests: string[]) => vo
       setSelected([...selected, manualInterest.trim()]);
       setManualInterest("");
     }
-  };
-
-  const removeCustomInterest = (interest: string) => {
-    setCustomInterests(customInterests.filter(i => i !== interest));
-    setSelected(selected.filter(i => i !== interest));
   };
 
   return (
@@ -465,7 +638,7 @@ function InterestsStep({ onContinue }: { onContinue: (interests: string[]) => vo
       </div>
 
       {/* Selected Interests Display */}
-      {(selected.length > 0 || customInterests.length > 0) && (
+      {selected.length > 0 && (
         <div className="flex flex-wrap gap-2 justify-center">
           {selected.map(id => {
             const preset = INTERESTS.find(i => i.id === id);
@@ -474,13 +647,7 @@ function InterestsStep({ onContinue }: { onContinue: (interests: string[]) => vo
               <span key={id} className="flex items-center gap-1 px-3 py-1 bg-teal-50 text-[#27788e] rounded-full text-sm font-medium">
                 {preset?.icon || <Heart className="w-3 h-3" />}
                 {label}
-                <button onClick={() => {
-                  if (customInterests.includes(id)) {
-                    removeCustomInterest(id);
-                  } else {
-                    toggle(id);
-                  }
-                }} className="hover:text-red-400 ml-1">✕</button>
+                <button onClick={() => toggle(id)} className="hover:text-red-400 ml-1">✕</button>
               </span>
             );
           })}
@@ -495,16 +662,22 @@ function InterestsStep({ onContinue }: { onContinue: (interests: string[]) => vo
             <button
               key={interest.id}
               onClick={() => toggle(interest.id)}
-              className={`relative overflow-hidden rounded-xl aspect-square transition-all
-                ${active ? "ring-2 ring-[#14b8a6] ring-offset-2 shadow-md" : "hover:shadow-md"}`}
+              className={`relative overflow-hidden rounded-xl p-4 text-center transition-all border-2
+                ${active
+                  ? "border-[#14b8a6] bg-teal-50/50 shadow-md"
+                  : "border-slate-100 hover:border-slate-200"}`}
             >
-              <img src={interest.image} alt={interest.label} className="absolute inset-0 w-full h-full object-cover" />
-              <div className={`absolute inset-0 bg-gradient-to-t ${interest.gradient} opacity-70`} />
-              {active && <div className="absolute inset-0 bg-[#14b8a6]/30 backdrop-blur-sm" />}
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
-                <div className="text-white">{active ? <CheckCircle2 className="w-5 h-5" /> : interest.icon}</div>
-                <span className="text-white font-medium text-[10px] text-center leading-tight drop-shadow">{interest.label}</span>
+              <div className={`${active ? "text-[#27788e]" : "text-slate-400"}`}>
+                {interest.icon}
               </div>
+              <span className={`text-xs font-medium mt-1 block ${active ? "text-[#1e355c]" : "text-slate-500"}`}>
+                {interest.label}
+              </span>
+              {active && (
+                <div className="absolute top-1 right-1 w-4 h-4 bg-[#14b8a6] rounded-full flex items-center justify-center">
+                  <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                </div>
+              )}
             </button>
           );
         })}
@@ -524,15 +697,13 @@ function InterestsStep({ onContinue }: { onContinue: (interests: string[]) => vo
   );
 }
 
-// ─── Step 4: Style ────────────────────────────────────────────────────────────
+// ─── Step 5: Style ────────────────────────────────────────────────────────────
 function StyleStep({ onContinue }: { onContinue: (style: Record<string, string>) => void }) {
   const [transport, setTransport] = useState("flight");
   const [pace, setPace] = useState("balanced");
   const [wakeUp, setWakeUp] = useState("mid");
-  const [customTransport, setCustomTransport] = useState("");
-  const [showManualInput, setShowManualInput] = useState(false);
 
-  const renderSelector = (options: TravelStyle[], value: string, setter: (v: string) => void, label: string) => (
+  const renderSelector = (options: TravelStyle[], value: string, setter: (v: string) => void) => (
     <div className="grid grid-cols-3 gap-2">
       {options.map(opt => {
         const active = value === opt.id;
@@ -554,13 +725,6 @@ function StyleStep({ onContinue }: { onContinue: (style: Record<string, string>)
     </div>
   );
 
-  const handleCustomTransportSubmit = () => {
-    if (customTransport.trim()) {
-      // Store custom transport as a string
-      onContinue({ transport: customTransport.trim(), pace, wakeUp });
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -574,75 +738,23 @@ function StyleStep({ onContinue }: { onContinue: (style: Record<string, string>)
         <p className="text-slate-500 mt-1">How do you like to travel?</p>
       </div>
 
-      <div className="flex justify-center gap-2 mb-4">
-        <button
-          onClick={() => setShowManualInput(false)}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-            !showManualInput ? "bg-[#1e355c] text-white shadow-md" : "bg-slate-100 text-slate-600"
-          }`}
-        >
-          Quick Select
-        </button>
-        <button
-          onClick={() => setShowManualInput(true)}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-            showManualInput ? "bg-[#1e355c] text-white shadow-md" : "bg-slate-100 text-slate-600"
-          }`}
-        >
-          Custom Transport
-        </button>
-      </div>
-
       <div className="space-y-4">
-        {showManualInput ? (
-          <div>
-            <h3 className="font-semibold text-[#1e355c] text-sm mb-2">Custom Transport</h3>
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <Edit3 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={customTransport}
-                  onChange={(e) => setCustomTransport(e.target.value)}
-                  placeholder="e.g., Ferry, Helicopter..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-[#27788e] outline-none transition-all"
-                  onKeyDown={(e) => e.key === "Enter" && handleCustomTransportSubmit()}
-                />
-              </div>
-              <button
-                onClick={handleCustomTransportSubmit}
-                disabled={!customTransport.trim()}
-                className="px-6 py-2.5 rounded-xl bg-[#1e355c] text-white font-semibold disabled:opacity-50 hover:shadow-lg transition-all"
-              >
-                Set
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div>
-              <h3 className="font-semibold text-[#1e355c] text-sm mb-2">Transport</h3>
-              {renderSelector(TRANSPORT_OPTIONS, transport, setTransport, "transport")}
-            </div>
-          </>
-        )}
-
+        <div>
+          <h3 className="font-semibold text-[#1e355c] text-sm mb-2">Transport</h3>
+          {renderSelector(TRANSPORT_OPTIONS, transport, setTransport)}
+        </div>
         <div>
           <h3 className="font-semibold text-[#1e355c] text-sm mb-2">Pace</h3>
-          {renderSelector(PACE_OPTIONS, pace, setPace, "pace")}
+          {renderSelector(PACE_OPTIONS, pace, setPace)}
         </div>
         <div>
           <h3 className="font-semibold text-[#1e355c] text-sm mb-2">Wake Up</h3>
-          {renderSelector(WAKE_OPTIONS, wakeUp, setWakeUp, "wakeUp")}
+          {renderSelector(WAKE_OPTIONS, wakeUp, setWakeUp)}
         </div>
       </div>
 
       <button
-        onClick={() => onContinue({ 
-          transport: showManualInput ? customTransport : transport, 
-          pace, 
-          wakeUp 
-        })}
+        onClick={() => onContinue({ transport, pace, wakeUp })}
         className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white font-semibold shadow-lg hover:shadow-xl transition-all"
       >
         Continue <ArrowRight className="w-4 h-4" />
@@ -651,33 +763,98 @@ function StyleStep({ onContinue }: { onContinue: (style: Record<string, string>)
   );
 }
 
-// ─── Step 5: Review ──────────────────────────────────────────────────────────
-function ReviewStep({ onGenerate }: { onGenerate: () => void }) {
+// ─── Step 6: Review ──────────────────────────────────────────────────────────
+function ReviewStep({ 
+  tripType, from, to, details, interests, style, onGenerate 
+}: { 
+  tripType: TripType;
+  from: Location | null;
+  to: Location | null;
+  details: { startDate: string; endDate: string; duration: number; budget: string; isOneDayTrip: boolean };
+  interests: string[];
+  style: Record<string, string>;
+  onGenerate: () => void;
+}) {
+  const budgetLabel = BUDGET_LEVELS.find(b => b.id === details.budget);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.4 }}
-      className="space-y-6 text-center"
+      className="space-y-6"
     >
-      <div className="flex flex-col items-center">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", delay: 0.2 }}
-          className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#1e355c] to-[#27788e] flex items-center justify-center shadow-xl mb-4"
-        >
-          <Sparkles className="w-10 h-10 text-white" />
-        </motion.div>
+      <div className="text-center">
         <h2 className="text-2xl md:text-3xl font-bold text-[#1e355c]">Ready to Go!</h2>
-        <p className="text-slate-500 mt-1 max-w-sm">Everything looks perfect. Let's create your dream itinerary.</p>
+        <p className="text-slate-500 mt-1">Review your trip details before generating</p>
       </div>
 
-      <div className="bg-gradient-to-br from-[#1e355c] to-[#27788e] rounded-2xl p-6 text-white">
-        <div className="flex items-center gap-2 justify-center text-sm">
-          <Users className="w-4 h-4" />
-          <span>AI will craft your personalized trip in seconds</span>
+      <div className="space-y-4">
+        {/* Trip Type */}
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+          <span className="text-sm text-slate-600">Trip Type</span>
+          <span className="font-semibold text-[#1e355c] capitalize">
+            {tripType === "round-trip" ? "Round Trip" : "One Way"}
+          </span>
+        </div>
+
+        {/* Route */}
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+          <span className="text-sm text-slate-600">Route</span>
+          <span className="font-semibold text-[#1e355c]">
+            {from?.name} → {to?.name}
+          </span>
+        </div>
+
+        {/* Duration */}
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+          <span className="text-sm text-slate-600">Duration</span>
+          <span className="font-semibold text-[#1e355c]">
+            {details.isOneDayTrip ? "1 Day Trip" : `${details.duration} Days`}
+          </span>
+        </div>
+
+        {/* Dates */}
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+          <span className="text-sm text-slate-600">Dates</span>
+          <span className="font-semibold text-[#1e355c]">
+            {new Date(details.startDate).toLocaleDateString()} - {new Date(details.endDate).toLocaleDateString()}
+          </span>
+        </div>
+
+        {/* Budget */}
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+          <span className="text-sm text-slate-600">Budget</span>
+          <span className="font-semibold text-[#1e355c]">{budgetLabel?.label || 'Not set'}</span>
+        </div>
+
+        {/* Interests */}
+        <div className="p-4 bg-slate-50 rounded-xl">
+          <p className="text-sm text-slate-600 mb-2">Interests</p>
+          <div className="flex flex-wrap gap-1.5">
+            {interests.map((interest) => (
+              <span key={interest} className="px-2 py-1 bg-white rounded-full text-xs font-medium text-slate-700">
+                {interest}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Style */}
+        <div className="p-4 bg-slate-50 rounded-xl">
+          <p className="text-sm text-slate-600 mb-2">Travel Style</p>
+          <div className="flex flex-wrap gap-2">
+            <span className="px-2 py-1 bg-white rounded-full text-xs font-medium text-slate-700">
+              Transport: {style.transport}
+            </span>
+            <span className="px-2 py-1 bg-white rounded-full text-xs font-medium text-slate-700">
+              Pace: {style.pace}
+            </span>
+            <span className="px-2 py-1 bg-white rounded-full text-xs font-medium text-slate-700">
+              Wake Up: {style.wakeUp}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -749,16 +926,24 @@ function GeneratingScreen() {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function CreateTripPage() {
-  const [step, setStep] = useState<Step>("destination");
-  const [destination, setDestination] = useState<Destination | null>(null);
-  const [details, setDetails] = useState<{ duration: number; budget: string } | null>(null);
+  const [step, setStep] = useState<Step>("trip-type");
+  const [tripType, setTripType] = useState<TripType>("one-way");
+  const [fromLocation, setFromLocation] = useState<Location | null>(null);
+  const [toLocation, setToLocation] = useState<Location | null>(null);
+  const [details, setDetails] = useState<{ 
+    startDate: string; 
+    endDate: string; 
+    duration: number; 
+    budget: string;
+    isOneDayTrip: boolean;
+  } | null>(null);
   const [interests, setInterests] = useState<string[]>([]);
   const [style, setStyle] = useState<Record<string, string> | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const router = useRouter();
 
   const handleContinue = () => {
-    const steps: Step[] = ["destination", "details", "interests", "style", "review"];
+    const steps: Step[] = ["trip-type", "destination", "details", "interests", "style", "review"];
     const currentIndex = steps.indexOf(step);
     if (currentIndex < steps.length - 1) {
       setStep(steps[currentIndex + 1]);
@@ -767,7 +952,7 @@ export default function CreateTripPage() {
   };
 
   const handleBack = () => {
-    const steps: Step[] = ["destination", "details", "interests", "style", "review"];
+    const steps: Step[] = ["trip-type", "destination", "details", "interests", "style", "review"];
     const currentIndex = steps.indexOf(step);
     if (currentIndex > 0) {
       setStep(steps[currentIndex - 1]);
@@ -776,7 +961,7 @@ export default function CreateTripPage() {
   };
 
   const handleStepClick = (targetStep: Step) => {
-    const steps: Step[] = ["destination", "details", "interests", "style", "review"];
+    const steps: Step[] = ["trip-type", "destination", "details", "interests", "style", "review"];
     const currentIndex = steps.indexOf(step);
     const targetIndex = steps.indexOf(targetStep);
     if (targetIndex <= currentIndex) {
@@ -789,39 +974,34 @@ export default function CreateTripPage() {
     setIsGenerating(true);
 
     try {
-      // 1. Send the UI data to our API route
       const response = await fetch('/api/trips', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          destination: destination?.name || "Unknown",
-          duration: details?.duration || 1,
-          budget: details?.budget || "medium",
-          interests: interests,
-          transport: style?.transport || "flight",
+          destination_name: toLocation?.name || "Unknown",
+          destination_lat: toLocation?.lat || null,
+          destination_lng: toLocation?.lng || null,
+          start_date: details?.startDate,
+          end_date: details?.endDate,
+          trip_days: details?.duration || 1,
+          travel_mode: style?.transport || "flight",
+          budget: details?.budget || "comfort",
           pace: style?.pace || "balanced",
-          wakeUp: style?.wakeUp || "mid",
+          wake_up: style?.wakeUp || "mid",
+          interests: interests,
+          status: "planning",
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to save trip to database");
-      }
+      if (!response.ok) throw new Error("Failed to save trip");
 
       const data = await response.json();
-
-      // 2. Success! Redirect the user to their newly created itinerary page
-      // Assuming your folder structure is app/itinerary/[tripId]/page.tsx
       if (data.trip && data.trip.id) {
-         router.push(`/itinerary/${data.trip.id}`);
+        router.push(`/itinerary/${data.trip.id}`);
       }
-
     } catch (error) {
       console.error("Error generating trip:", error);
-      // In a real app, you might want to show a toast/error message here
-      setIsGenerating(false); 
+      setIsGenerating(false);
     }
   };
 
@@ -857,11 +1037,22 @@ export default function CreateTripPage() {
         {/* Main Content */}
         <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/50 p-6 md:p-8">
           <AnimatePresence mode="wait">
+            {step === "trip-type" && (
+              <TripTypeStep
+                key="trip-type"
+                onContinue={(type) => {
+                  setTripType(type);
+                  handleContinue();
+                }}
+              />
+            )}
             {step === "destination" && (
               <DestinationStep
                 key="destination"
-                onSelect={(d) => {
-                  setDestination(d);
+                tripType={tripType}
+                onContinue={(d) => {
+                  setFromLocation(d.from);
+                  setToLocation(d.to);
                   handleContinue();
                 }}
               />
@@ -896,6 +1087,12 @@ export default function CreateTripPage() {
             {step === "review" && (
               <ReviewStep
                 key="review"
+                tripType={tripType}
+                from={fromLocation}
+                to={toLocation}
+                details={details!}
+                interests={interests}
+                style={style!}
                 onGenerate={handleGenerate}
               />
             )}
