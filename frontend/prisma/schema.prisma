@@ -188,7 +188,10 @@ model trips {
   ai_recommendations   ai_recommendations[]
   itineraries          itineraries[]
   users                users?               @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
+  budget      String?   @db.VarChar(50)
+  pace        String?   @db.VarChar(50)
+  wake_up     String?   @db.VarChar(50)
+  interests   String[]  // This will store your array of selected interests
   @@index([user_id], map: "idx_trip_user")
 }
 

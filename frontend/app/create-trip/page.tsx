@@ -1,12 +1,14 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Compass, ArrowRight, ArrowLeft, Sparkles, MapPin, Calendar, Wallet, Zap,
   CheckCircle2, Sun, Moon, Coffee, Plane, Train, Car, Bike,
   Globe, Mountain, Utensils, Camera, Leaf, Heart, Star, Waves,
-  Building2, ShoppingBag, Music, TrendingUp, Clock, Users
+  Building2, ShoppingBag, Music, TrendingUp, Clock, Users,
+  Search, Edit3, DollarSign, CalendarDays, User, Hash
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -138,6 +140,24 @@ function StepProgress({ current, onStepClick }: { current: Step; onStepClick: (s
 // ─── Step 1: Destination ──────────────────────────────────────────────────────
 function DestinationStep({ onSelect }: { onSelect: (d: Destination) => void }) {
   const [selected, setSelected] = useState<Destination | null>(null);
+  const [manualDestination, setManualDestination] = useState("");
+  const [showManualInput, setShowManualInput] = useState(false);
+
+  const handleManualSubmit = () => {
+    if (manualDestination.trim()) {
+      const customDestination: Destination = {
+        id: "custom",
+        name: manualDestination.trim(),
+        country: "Custom",
+        emoji: "📍",
+        image: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&q=80",
+        temp: "--",
+        cost: "--",
+        season: "All year",
+      };
+      onSelect(customDestination);
+    }
+  };
 
   return (
     <motion.div
@@ -149,59 +169,110 @@ function DestinationStep({ onSelect }: { onSelect: (d: Destination) => void }) {
     >
       <div className="text-center">
         <h2 className="text-2xl md:text-3xl font-bold text-[#1e355c]">Where to?</h2>
-        <p className="text-slate-500 mt-1">Pick your dream destination</p>
+        <p className="text-slate-500 mt-1">Pick a destination or enter manually</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {DESTINATIONS.map((d) => {
-          const isSelected = selected?.id === d.id;
-          return (
-            <motion.button
-              key={d.id}
-              whileHover={{ y: -4, scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setSelected(d)}
-              className={`relative overflow-hidden rounded-2xl aspect-[3/4] text-left transition-all
-                ${isSelected ? "ring-2 ring-[#14b8a6] ring-offset-2 shadow-lg" : "hover:shadow-lg"}`}
-            >
-              <img src={d.image} alt={d.name} className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              {d.trending && (
-                <div className="absolute top-2 left-2 px-2 py-0.5 bg-[#14b8a6] rounded-full text-[9px] font-bold text-white uppercase">
-                  Trending
-                </div>
-              )}
-              {isSelected && (
-                <div className="absolute top-2 right-2 w-6 h-6 bg-[#14b8a6] rounded-full flex items-center justify-center shadow-lg">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                </div>
-              )}
-              <div className="absolute bottom-0 left-0 right-0 p-3">
-                <div className="flex items-center gap-1">
-                  <span className="text-sm">{d.emoji}</span>
-                  <span className="text-white font-bold text-sm">{d.name}</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-white/70 text-[10px]">
-                  <span>{d.temp}</span>
-                  <span className="w-px h-2 bg-white/30" />
-                  <span>{d.cost}/day</span>
-                </div>
-              </div>
-            </motion.button>
-          );
-        })}
+      {/* Manual Input Toggle */}
+      <div className="flex items-center justify-center gap-4">
+        <button
+          onClick={() => setShowManualInput(false)}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+            !showManualInput ? "bg-[#1e355c] text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4" />
+            Quick Picks
+          </div>
+        </button>
+        <button
+          onClick={() => setShowManualInput(true)}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+            showManualInput ? "bg-[#1e355c] text-white shadow-md" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Edit3 className="w-4 h-4" />
+            Enter Manually
+          </div>
+        </button>
       </div>
 
-      <button
-        disabled={!selected}
-        onClick={() => selected && onSelect(selected)}
-        className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold transition-all
-          ${selected
-            ? "bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white shadow-lg hover:shadow-xl"
-            : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
-      >
-        Continue <ArrowRight className="w-4 h-4" />
-      </button>
+      {showManualInput ? (
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              value={manualDestination}
+              onChange={(e) => setManualDestination(e.target.value)}
+              placeholder="Enter destination name..."
+              className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-slate-200 focus:border-[#27788e] focus:ring-2 focus:ring-[#27788e]/20 outline-none transition-all text-lg"
+              onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
+            />
+          </div>
+          <button
+            onClick={handleManualSubmit}
+            disabled={!manualDestination.trim()}
+            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+          >
+            Continue with {manualDestination || "Destination"}
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {DESTINATIONS.map((d) => {
+              const isSelected = selected?.id === d.id;
+              return (
+                <motion.button
+                  key={d.id}
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setSelected(d)}
+                  className={`relative overflow-hidden rounded-2xl aspect-[3/4] text-left transition-all
+                    ${isSelected ? "ring-2 ring-[#14b8a6] ring-offset-2 shadow-lg" : "hover:shadow-lg"}`}
+                >
+                  <img src={d.image} alt={d.name} className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  {d.trending && (
+                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-[#14b8a6] rounded-full text-[9px] font-bold text-white uppercase">
+                      Trending
+                    </div>
+                  )}
+                  {isSelected && (
+                    <div className="absolute top-2 right-2 w-6 h-6 bg-[#14b8a6] rounded-full flex items-center justify-center shadow-lg">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm">{d.emoji}</span>
+                      <span className="text-white font-bold text-sm">{d.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-white/70 text-[10px]">
+                      <span>{d.temp}</span>
+                      <span className="w-px h-2 bg-white/30" />
+                      <span>{d.cost}/day</span>
+                    </div>
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+
+          <button
+            disabled={!selected}
+            onClick={() => selected && onSelect(selected)}
+            className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold transition-all
+              ${selected
+                ? "bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white shadow-lg hover:shadow-xl"
+                : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
+          >
+            Continue <ArrowRight className="w-4 h-4" />
+          </button>
+        </>
+      )}
     </motion.div>
   );
 }
@@ -210,6 +281,16 @@ function DestinationStep({ onSelect }: { onSelect: (d: Destination) => void }) {
 function DetailsStep({ onContinue }: { onContinue: (d: { duration: number; budget: string }) => void }) {
   const [duration, setDuration] = useState(7);
   const [budget, setBudget] = useState("comfort");
+  const [manualDuration, setManualDuration] = useState("");
+  const [showManualInput, setShowManualInput] = useState(false);
+
+  const handleManualSubmit = () => {
+    const days = parseInt(manualDuration);
+    if (!isNaN(days) && days > 0) {
+      setDuration(days);
+      onContinue({ duration: days, budget });
+    }
+  };
 
   return (
     <motion.div
@@ -232,20 +313,65 @@ function DetailsStep({ onContinue }: { onContinue: (d: { duration: number; budge
             {duration}<span className="text-base font-medium text-slate-400 ml-1">days</span>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {[3, 5, 7, 10, 14].map(d => (
-            <button
-              key={d}
-              onClick={() => setDuration(d)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all
-                ${duration === d
-                  ? "bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white shadow-md"
-                  : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
-            >
-              {d} days
-            </button>
-          ))}
+
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setShowManualInput(false)}
+            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
+              !showManualInput ? "bg-[#1e355c] text-white" : "bg-slate-100 text-slate-600"
+            }`}
+          >
+            Quick Select
+          </button>
+          <button
+            onClick={() => setShowManualInput(true)}
+            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
+              showManualInput ? "bg-[#1e355c] text-white" : "bg-slate-100 text-slate-600"
+            }`}
+          >
+            Custom
+          </button>
         </div>
+
+        {showManualInput ? (
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="number"
+                min="1"
+                max="30"
+                value={manualDuration}
+                onChange={(e) => setManualDuration(e.target.value)}
+                placeholder="Enter days..."
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-[#27788e] outline-none transition-all"
+                onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
+              />
+            </div>
+            <button
+              onClick={handleManualSubmit}
+              disabled={!manualDuration || parseInt(manualDuration) <= 0}
+              className="px-6 py-2.5 rounded-xl bg-[#1e355c] text-white font-semibold disabled:opacity-50 hover:shadow-lg transition-all"
+            >
+              Set
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {[3, 5, 7, 10, 14].map(d => (
+              <button
+                key={d}
+                onClick={() => setDuration(d)}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all
+                  ${duration === d
+                    ? "bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white shadow-md"
+                    : "bg-slate-50 text-slate-600 hover:bg-slate-100"}`}
+              >
+                {d} days
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Budget */}
@@ -285,7 +411,23 @@ function DetailsStep({ onContinue }: { onContinue: (d: { duration: number; budge
 // ─── Step 3: Interests ────────────────────────────────────────────────────────
 function InterestsStep({ onContinue }: { onContinue: (interests: string[]) => void }) {
   const [selected, setSelected] = useState<string[]>([]);
+  const [manualInterest, setManualInterest] = useState("");
+  const [customInterests, setCustomInterests] = useState<string[]>([]);
+
   const toggle = (id: string) => setSelected(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+
+  const addCustomInterest = () => {
+    if (manualInterest.trim() && !customInterests.includes(manualInterest.trim())) {
+      setCustomInterests([...customInterests, manualInterest.trim()]);
+      setSelected([...selected, manualInterest.trim()]);
+      setManualInterest("");
+    }
+  };
+
+  const removeCustomInterest = (interest: string) => {
+    setCustomInterests(customInterests.filter(i => i !== interest));
+    setSelected(selected.filter(i => i !== interest));
+  };
 
   return (
     <motion.div
@@ -297,23 +439,55 @@ function InterestsStep({ onContinue }: { onContinue: (interests: string[]) => vo
     >
       <div className="text-center">
         <h2 className="text-2xl md:text-3xl font-bold text-[#1e355c]">Your Interests</h2>
-        <p className="text-slate-500 mt-1">Select what excites you</p>
+        <p className="text-slate-500 mt-1">Select or add your own interests</p>
       </div>
 
-      {selected.length > 0 && (
+      {/* Custom Interest Input */}
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Edit3 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            value={manualInterest}
+            onChange={(e) => setManualInterest(e.target.value)}
+            placeholder="Add custom interest..."
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-[#27788e] outline-none transition-all"
+            onKeyDown={(e) => e.key === "Enter" && addCustomInterest()}
+          />
+        </div>
+        <button
+          onClick={addCustomInterest}
+          disabled={!manualInterest.trim()}
+          className="px-6 py-2.5 rounded-xl bg-[#1e355c] text-white font-semibold disabled:opacity-50 hover:shadow-lg transition-all"
+        >
+          Add
+        </button>
+      </div>
+
+      {/* Selected Interests Display */}
+      {(selected.length > 0 || customInterests.length > 0) && (
         <div className="flex flex-wrap gap-2 justify-center">
           {selected.map(id => {
-            const interest = INTERESTS.find(i => i.id === id)!;
+            const preset = INTERESTS.find(i => i.id === id);
+            const label = preset?.label || id;
             return (
               <span key={id} className="flex items-center gap-1 px-3 py-1 bg-teal-50 text-[#27788e] rounded-full text-sm font-medium">
-                {interest.label}
-                <button onClick={() => toggle(id)} className="hover:text-red-400">✕</button>
+                {preset?.icon || <Heart className="w-3 h-3" />}
+                {label}
+                <button onClick={() => {
+                  if (customInterests.includes(id)) {
+                    removeCustomInterest(id);
+                  } else {
+                    toggle(id);
+                  }
+                }} className="hover:text-red-400 ml-1">✕</button>
               </span>
             );
           })}
         </div>
       )}
 
+      {/* Preset Interests */}
       <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
         {INTERESTS.map((interest) => {
           const active = selected.includes(interest.id);
@@ -355,8 +529,10 @@ function StyleStep({ onContinue }: { onContinue: (style: Record<string, string>)
   const [transport, setTransport] = useState("flight");
   const [pace, setPace] = useState("balanced");
   const [wakeUp, setWakeUp] = useState("mid");
+  const [customTransport, setCustomTransport] = useState("");
+  const [showManualInput, setShowManualInput] = useState(false);
 
-  const renderSelector = (options: TravelStyle[], value: string, setter: (v: string) => void) => (
+  const renderSelector = (options: TravelStyle[], value: string, setter: (v: string) => void, label: string) => (
     <div className="grid grid-cols-3 gap-2">
       {options.map(opt => {
         const active = value === opt.id;
@@ -378,6 +554,13 @@ function StyleStep({ onContinue }: { onContinue: (style: Record<string, string>)
     </div>
   );
 
+  const handleCustomTransportSubmit = () => {
+    if (customTransport.trim()) {
+      // Store custom transport as a string
+      onContinue({ transport: customTransport.trim(), pace, wakeUp });
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -391,23 +574,75 @@ function StyleStep({ onContinue }: { onContinue: (style: Record<string, string>)
         <p className="text-slate-500 mt-1">How do you like to travel?</p>
       </div>
 
+      <div className="flex justify-center gap-2 mb-4">
+        <button
+          onClick={() => setShowManualInput(false)}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+            !showManualInput ? "bg-[#1e355c] text-white shadow-md" : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          Quick Select
+        </button>
+        <button
+          onClick={() => setShowManualInput(true)}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+            showManualInput ? "bg-[#1e355c] text-white shadow-md" : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          Custom Transport
+        </button>
+      </div>
+
       <div className="space-y-4">
-        <div>
-          <h3 className="font-semibold text-[#1e355c] text-sm mb-2">Transport</h3>
-          {renderSelector(TRANSPORT_OPTIONS, transport, setTransport)}
-        </div>
+        {showManualInput ? (
+          <div>
+            <h3 className="font-semibold text-[#1e355c] text-sm mb-2">Custom Transport</h3>
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Edit3 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={customTransport}
+                  onChange={(e) => setCustomTransport(e.target.value)}
+                  placeholder="e.g., Ferry, Helicopter..."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-[#27788e] outline-none transition-all"
+                  onKeyDown={(e) => e.key === "Enter" && handleCustomTransportSubmit()}
+                />
+              </div>
+              <button
+                onClick={handleCustomTransportSubmit}
+                disabled={!customTransport.trim()}
+                className="px-6 py-2.5 rounded-xl bg-[#1e355c] text-white font-semibold disabled:opacity-50 hover:shadow-lg transition-all"
+              >
+                Set
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div>
+              <h3 className="font-semibold text-[#1e355c] text-sm mb-2">Transport</h3>
+              {renderSelector(TRANSPORT_OPTIONS, transport, setTransport, "transport")}
+            </div>
+          </>
+        )}
+
         <div>
           <h3 className="font-semibold text-[#1e355c] text-sm mb-2">Pace</h3>
-          {renderSelector(PACE_OPTIONS, pace, setPace)}
+          {renderSelector(PACE_OPTIONS, pace, setPace, "pace")}
         </div>
         <div>
           <h3 className="font-semibold text-[#1e355c] text-sm mb-2">Wake Up</h3>
-          {renderSelector(WAKE_OPTIONS, wakeUp, setWakeUp)}
+          {renderSelector(WAKE_OPTIONS, wakeUp, setWakeUp, "wakeUp")}
         </div>
       </div>
 
       <button
-        onClick={() => onContinue({ transport, pace, wakeUp })}
+        onClick={() => onContinue({ 
+          transport: showManualInput ? customTransport : transport, 
+          pace, 
+          wakeUp 
+        })}
         className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white font-semibold shadow-lg hover:shadow-xl transition-all"
       >
         Continue <ArrowRight className="w-4 h-4" />
@@ -520,6 +755,7 @@ export default function CreateTripPage() {
   const [interests, setInterests] = useState<string[]>([]);
   const [style, setStyle] = useState<Record<string, string> | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const router = useRouter();
 
   const handleContinue = () => {
     const steps: Step[] = ["destination", "details", "interests", "style", "review"];
@@ -549,12 +785,44 @@ export default function CreateTripPage() {
     }
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
-      // router.push("/itinerary/new");
-    }, 3000);
+
+    try {
+      // 1. Send the UI data to our API route
+      const response = await fetch('/api/trips', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          destination: destination?.name || "Unknown",
+          duration: details?.duration || 1,
+          budget: details?.budget || "medium",
+          interests: interests,
+          transport: style?.transport || "flight",
+          pace: style?.pace || "balanced",
+          wakeUp: style?.wakeUp || "mid",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save trip to database");
+      }
+
+      const data = await response.json();
+
+      // 2. Success! Redirect the user to their newly created itinerary page
+      // Assuming your folder structure is app/itinerary/[tripId]/page.tsx
+      if (data.trip && data.trip.id) {
+         router.push(`/itinerary/${data.trip.id}`);
+      }
+
+    } catch (error) {
+      console.error("Error generating trip:", error);
+      // In a real app, you might want to show a toast/error message here
+      setIsGenerating(false); 
+    }
   };
 
   if (isGenerating) {
@@ -569,7 +837,6 @@ export default function CreateTripPage() {
 
   const currentIndex = STEPS.findIndex(s => s.id === step);
   const isFirstStep = currentIndex === 0;
-  const isLastStep = currentIndex === STEPS.length - 1;
 
   return (
     <div className="min-h-screen bg-[#f8fafb] p-4 md:p-6">
@@ -634,7 +901,7 @@ export default function CreateTripPage() {
             )}
           </AnimatePresence>
 
-          {/* Navigation Buttons - Always visible except on first step */}
+          {/* Navigation Buttons */}
           {!isFirstStep && step !== "review" && !isGenerating && (
             <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-100">
               <button
