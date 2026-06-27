@@ -192,6 +192,8 @@ model trips {
   pace        String?   @db.VarChar(50)
   wake_up     String?   @db.VarChar(50)
   interests   String[]  // This will store your array of selected interests
+  trip_type    String?   @db.VarChar(50)
+  origin_name  String?   @db.VarChar(255)
   @@index([user_id], map: "idx_trip_user")
 }
 
