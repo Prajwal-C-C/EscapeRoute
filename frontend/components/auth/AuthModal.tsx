@@ -8,7 +8,6 @@ import {
   Mail, Lock, User, Eye, EyeOff, 
   ArrowRight, X, Check
 } from "lucide-react";
-import { FaGithub as GitHub } from "react-icons/fa";
 import { signIn } from "next-auth/react";
 
 interface AuthModalProps {
@@ -27,11 +26,6 @@ export function AuthModal({ isLogin, onClose, onToggleMode }: AuthModalProps) {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     await signIn("google", { callbackUrl: "/dashboard" });
-  };
-
-  const handleGithubLogin = async () => {
-    setIsLoading(true);
-    await signIn("github", { callbackUrl: "/dashboard" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,13 +78,6 @@ export function AuthModal({ isLogin, onClose, onToggleMode }: AuthModalProps) {
 
   return (
     <div className="relative">
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 z-10 p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors"
-      >
-        <X className="w-4 h-4 text-slate-500" />
-      </button>
-
       <div className="p-6">
         <div className="text-center mb-5">
           <motion.div
@@ -134,14 +121,6 @@ export function AuthModal({ isLogin, onClose, onToggleMode }: AuthModalProps) {
             <span className="text-slate-600 text-xs font-medium">Google</span>
           </button>
           
-          <button 
-            onClick={handleGithubLogin}
-            disabled={isLoading}
-            className="flex-1 flex items-center justify-center gap-2 border border-slate-200 rounded-lg py-2 hover:bg-slate-50 transition-all disabled:opacity-50"
-          >
-            <GitHub className="w-4 h-4 text-slate-600" />
-            <span className="text-slate-600 text-xs font-medium">GitHub</span>
-          </button>
         </div>
 
         <div className="relative my-4">
@@ -224,21 +203,31 @@ export function AuthModal({ isLogin, onClose, onToggleMode }: AuthModalProps) {
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-600 to-teal-500 text-white py-2 rounded-lg hover:from-blue-700 hover:to-teal-600 transition-all font-semibold text-sm mt-2 relative overflow-hidden group"
-          >
-            <span className={`flex items-center justify-center gap-2 ${isLoading ? 'opacity-0' : 'opacity-100'}`}>
-              {isLogin ? "Sign In" : "Create Account"}
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-            </span>
-            {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              </div>
-            )}
-          </button>
+          <div className="space-y-3">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-blue-600 to-teal-500 text-white py-2 rounded-lg hover:from-blue-700 hover:to-teal-600 transition-all font-semibold text-sm relative overflow-hidden group"
+            >
+              <span className={`flex items-center justify-center gap-2 ${isLoading ? 'opacity-0' : 'opacity-100'}`}>
+                {isLogin ? "Sign In" : "Create Account"}
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </span>
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                </div>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full border border-slate-200 text-slate-700 py-2 rounded-lg hover:bg-slate-50 transition-all text-sm"
+            >
+              Cancel
+            </button>
+          </div>
         </form>
 
         <p className="text-center text-slate-500 text-xs mt-4">
