@@ -5,10 +5,63 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 // Initialize Prisma
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL as string
-});
-const prisma = new PrismaClient({ adapter });
+let prisma: PrismaClient;
+
+try {
+  const adapter = new PrismaPg({
+    connectionString: process.env.DATABASE_URL as string
+  });
+  prisma = new PrismaClient({ adapter });
+} catch (error) {
+  console.error("❌ Failed to initialize Prisma with adapter:", error);
+  prisma = new PrismaClient();
+}
+
+// ==========================================
+// Helper: Geocode a location using Geoapify
+// ==========================================
+async function geocodeLocation(locationName: string): Promise<{ lat: number | null; lng: number | null }> {
+  if (!locationName) {
+    return { lat: null, lng: null };
+  }
+
+  try {
+    const apiKey = process.env.GEOAPIFY_API_KEY || process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY;
+    
+    if (!apiKey) {
+      console.warn("⚠️ Geoapify API key not found");
+      return { lat: null, lng: null };
+    }
+
+    const geoResponse = await fetch(
+      `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(
+        locationName
+      )}&limit=1&apiKey=${apiKey}`
+    );
+
+    if (!geoResponse.ok) {
+      console.error("❌ Geoapify API error:", geoResponse.status);
+      return { lat: null, lng: null };
+    }
+
+    const geoData = await geoResponse.json();
+
+    if (geoData.features?.length > 0) {
+      const feature = geoData.features[0];
+      const lat = feature.properties?.lat || null;
+      const lng = feature.properties?.lon || null;
+      
+      console.log(`✅ Geocoded "${locationName}" → (${lat}, ${lng})`);
+      return { lat, lng };
+    } else {
+      console.warn(`⚠️ No features found for: ${locationName}`);
+      return { lat: null, lng: null };
+    }
+  } catch (geoError) {
+    console.error(`❌ Geocoding error for "${locationName}":`, geoError);
+    return { lat: null, lng: null };
+  }
+}
 
 // ==========================================
 // GET: Fetch all saved trips
@@ -20,8 +73,11 @@ export async function GET() {
     });
     return NextResponse.json(allTrips);
   } catch (error) {
-    console.error("GET Database error:", error);
-    return NextResponse.json({ error: "Failed to fetch trips" }, { status: 500 });
+    console.error("❌ GET Database error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch trips" },
+      { status: 500 }
+    );
   }
 }
 
@@ -32,7 +88,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // Destructure all fields from the request body
+    console.log("📥 Incoming POST data:", body);
+    
     const { 
       destination_name,
       origin_name,
@@ -45,38 +102,36 @@ export async function POST(request: NextRequest) {
       pace,
       wake_up,
       interests,
-      status
+      status,
+      destination_lat,
+      destination_lng,
+      origin_lat,
+      origin_lng
     } = body;
 
-    let lat = null;
-    let lng = null;
+    // --- Geocode Destination (To Location) ---
+    let destLat = destination_lat || null;
+    let destLng = destination_lng || null;
 
-    // Fetch Latitude and Longitude using Geoapify API
-    if (destination_name) {
-      try {
-        const geoResponse = await fetch(
-          `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(
-            destination_name
-          )}&apiKey=${process.env.GEOAPIFY_API_KEY}`
-        );
+    if (!destLat && destination_name) {
+      const result = await geocodeLocation(destination_name);
+      destLat = result.lat;
+      destLng = result.lng;
+    }
 
-        const geoData = await geoResponse.json();
+    // --- Geocode Origin (From Location) ---
+    let orgLat = origin_lat || null;
+    let orgLng = origin_lng || null;
 
-        if (geoData.features?.length > 0) {
-          lat = geoData.features[0].properties.lat;
-          lng = geoData.features[0].properties.lon;
-        }
-      } catch (geoError) {
-        console.error("Geocoding error:", geoError);
-        // Continue without lat/lng if geocoding fails
-      }
+    if (!orgLat && origin_name) {
+      const result = await geocodeLocation(origin_name);
+      orgLat = result.lat;
+      orgLng = result.lng;
     }
 
     // Prepare data for database
     const tripData: any = {
       destination_name: destination_name || "Unknown Destination",
-      destination_lat: lat,
-      destination_lng: lng,
       trip_days: trip_days || 1,
       travel_mode: travel_mode || null,
       budget: budget || null,
@@ -84,17 +139,43 @@ export async function POST(request: NextRequest) {
       wake_up: wake_up || null,
       interests: interests || [],
       status: status || "planning",
+      trip_type: trip_type || null,
+      origin_name: origin_name || null,
     };
 
-    // Add optional fields if they exist
-    if (origin_name) tripData.origin_name = origin_name;
-    if (trip_type) tripData.trip_type = trip_type;
-    if (start_date) tripData.start_date = new Date(start_date);
-    if (end_date) tripData.end_date = new Date(end_date);
+    // Add coordinates if they exist
+    if (destLat !== null && destLat !== undefined) {
+      tripData.destination_lat = destLat;
+    }
+    if (destLng !== null && destLng !== undefined) {
+      tripData.destination_lng = destLng;
+    }
+    if (orgLat !== null && orgLat !== undefined) {
+      tripData.origin_lat = orgLat;
+    }
+    if (orgLng !== null && orgLng !== undefined) {
+      tripData.origin_lng = orgLng;
+    }
+
+    // Add dates if they exist
+    if (start_date) {
+      tripData.start_date = new Date(start_date);
+    }
+    if (end_date) {
+      tripData.end_date = new Date(end_date);
+    }
+
+    console.log("💾 Saving to database:", tripData);
 
     // Save to database
     const newTrip = await prisma.trips.create({
       data: tripData,
+    });
+
+    console.log("✅ Trip saved successfully:", { 
+      id: newTrip.id, 
+      destination: newTrip.destination_name,
+      origin: newTrip.origin_name
     });
 
     return NextResponse.json({ 
@@ -103,11 +184,22 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error("POST Database error:", error);
-    return NextResponse.json({ 
-      error: "Failed to create trip",
-      details: error instanceof Error ? error.message : "Unknown error"
-    }, { status: 500 });
+    console.error("❌ POST Database error:", error);
+    
+    let errorMessage = "Failed to create trip";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      
+      // Check for specific Prisma errors
+      if (errorMessage.includes("Unknown argument")) {
+        errorMessage = "Database schema mismatch. Please run 'npx prisma migrate dev --name add_origin_coordinates'";
+      }
+    }
+    
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    );
   }
 }
 
@@ -136,7 +228,7 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error("DELETE Database error:", error);
+    console.error("❌ DELETE Database error:", error);
     return NextResponse.json(
       { error: "Failed to delete trip" },
       { status: 500 }

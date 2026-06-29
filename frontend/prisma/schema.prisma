@@ -163,8 +163,6 @@ model search_history {
   @@index([user_id], map: "idx_search_history")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-//@ignore
 model spatial_ref_sys {
   srid      Int     @id
   auth_name String? @db.VarChar(256)
@@ -179,6 +177,9 @@ model trips {
   destination_name     String?              @db.VarChar(255)
   destination_lat      Float?
   destination_lng      Float?
+  origin_name          String?              @db.VarChar(255)
+  origin_lat           Float?
+  origin_lng           Float?
   start_date           DateTime?            @db.Date
   end_date             DateTime?            @db.Date
   trip_days            Int?
@@ -189,9 +190,8 @@ model trips {
   budget               String?              @db.VarChar(50)
   pace                 String?              @db.VarChar(50)
   wake_up              String?              @db.VarChar(50)
-  interests            String[] // This will store your array of selected interests
+  interests            String[]
   trip_type            String?              @db.VarChar(50)
-  origin_name          String?              @db.VarChar(255)
   ai_recommendations   ai_recommendations[]
   itineraries          itineraries[]
   users                User?                @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -215,16 +215,13 @@ model User {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email           String    @unique @db.VarChar(255)
   username        String?   @unique @db.VarChar(100)
-  
-  // Consolidating your custom fields with NextAuth requirements
-  name            String?   @db.VarChar(255) // Maps to your full_name
-  image           String?   // Maps to your profile_picture
+  name            String?   @db.VarChar(255)
+  image           String?
   password        String?
-  emailVerified   DateTime? // Required for NextAuth
-
+  emailVerified   DateTime?
   created_at      DateTime? @default(now()) @db.Timestamp(6)
   updated_at      DateTime? @default(now()) @db.Timestamp(6)
-
+  
   // Relations
   accounts        Account[]
   sessions        Session[]
@@ -234,7 +231,7 @@ model User {
   trips           trips[]
   user_preferences user_preferences[]
 
-  @@map("users") // This forces Prisma to call this 'prisma.users'
+  @@map("users")
 }
 
 model weather_cache {
@@ -246,8 +243,6 @@ model weather_cache {
   updated_at   DateTime? @default(now()) @db.Timestamp(6)
 }
 
-// NextAuth required models
-// Account/Session relate to the merged User model above, which maps onto your existing `users` table
 model Account {
   id                String  @id @default(cuid())
   userId            String  @db.Uuid

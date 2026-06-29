@@ -7,7 +7,8 @@ import {
   Compass, ArrowRight, ArrowLeft, Sparkles, MapPin, Calendar,
   CheckCircle2, Plane, Train, Car, Bike, Bus,
   Clock, Edit3, Navigation, CalendarDays, 
-  ArrowLeftRight, CircleDot, Circle, Loader2
+  ArrowLeftRight, CircleDot, Circle, Loader2,
+  AlertCircle, DollarSign, Users
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -26,6 +27,8 @@ interface TravelStyle {
   label: string;
   desc: string;
   icon: React.ReactNode;
+  costPerKm?: number;
+  speedKmh?: number;
 }
 
 type TripType = "one-way" | "round-trip";
@@ -41,11 +44,11 @@ const STEPS: { id: Step; label: string; icon: React.ReactNode }[] = [
 ];
 
 const TRANSPORT_OPTIONS: TravelStyle[] = [
-  { id: "flight", label: "Flight", desc: "Fastest option", icon: <Plane className="w-5 h-5" /> },
-  { id: "train", label: "Train", desc: "Scenic routes", icon: <Train className="w-5 h-5" /> },
-  { id: "bus", label: "Bus", desc: "Budget friendly", icon: <Bus className="w-5 h-5" /> },
-  { id: "car", label: "Car", desc: "Fuel estimate", icon: <Car className="w-5 h-5" /> },
-  { id: "bike", label: "Bike", desc: "Fuel estimate", icon: <Bike className="w-5 h-5" /> },
+  { id: "flight", label: "Flight", desc: "Fastest option", icon: <Plane className="w-5 h-5" />, costPerKm: 0.12, speedKmh: 800 },
+  { id: "train", label: "Train", desc: "Scenic routes", icon: <Train className="w-5 h-5" />, costPerKm: 0.04, speedKmh: 120 },
+  { id: "bus", label: "Bus", desc: "Budget friendly", icon: <Bus className="w-5 h-5" />, costPerKm: 0.03, speedKmh: 90 },
+  { id: "car", label: "Car", desc: "Fuel estimate", icon: <Car className="w-5 h-5" />, costPerKm: 0.08, speedKmh: 80 },
+  { id: "bike", label: "Bike", desc: "Fuel estimate", icon: <Bike className="w-5 h-5" />, costPerKm: 0.04, speedKmh: 60 },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -56,6 +59,18 @@ function getDistanceInKm(lat1: number, lon1: number, lat2: number, lon2: number)
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) + 
             Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
+}
+
+function generateUniqueKey(item: any, index: number): string {
+  const props = item.properties || {};
+  const candidates = [
+    props.place_id,
+    props.osm_id,
+    `${props.lat}_${props.lon}`,
+    `result_${index}`,
+  ];
+  const key = candidates.find(c => c !== null && c !== undefined);
+  return key ? String(key) : `fallback_${index}_${Date.now()}`;
 }
 
 // ─── Step Progress ──────────────────────────────────────────────────────────
@@ -98,7 +113,6 @@ function StepProgress({ current, onStepClick }: { current: Step; onStepClick: (s
 }
 
 // ─── Location Search Component with Geoapify ──────────────────────────────
-// ─── Location Search Component with Geoapify ──────────────────────────────
 function LocationSearch({
   label,
   placeholder,
@@ -106,6 +120,7 @@ function LocationSearch({
   onChange,
   onSelect,
   icon,
+  error,
 }: {
   label: string;
   placeholder: string;
@@ -113,12 +128,14 @@ function LocationSearch({
   onChange: (val: string) => void;
   onSelect: (location: Location) => void;
   icon: React.ReactNode;
+  error?: string;
 }) {
   const API_KEY = process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY;
 
   const [suggestions, setSuggestions] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [touched, setTouched] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
@@ -139,19 +156,15 @@ function LocationSearch({
       );
 
       const data = await response.json();
-      console.log("Geoapify response:", data); // Debug log
 
-      // Geoapify returns data in `features` array
       const results: Location[] = (data.features || []).map(
         (item: any, index: number) => {
-          // Extract coordinates from geometry
-          // Geoapify returns [longitude, latitude] in coordinates
           const coords = item.geometry?.coordinates || [];
           const lng = coords[0] || null;
           const lat = coords[1] || null;
 
           return {
-            id: item.properties?.place_id || index.toString(),
+            id: generateUniqueKey(item, index),
             name: item.properties?.formatted || item.properties?.name || query,
             city: item.properties?.city || item.properties?.town || item.properties?.village || "",
             state: item.properties?.state || "",
@@ -175,7 +188,6 @@ function LocationSearch({
     const timer = setTimeout(() => {
       searchLocations(value);
     }, 300);
-
     return () => clearTimeout(timer);
   }, [value]);
 
@@ -188,17 +200,16 @@ function LocationSearch({
         setShowSuggestions(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-
-    return () =>
-      document.removeEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const showError = touched && error && !value;
 
   return (
     <div className="relative" ref={suggestionsRef}>
       <label className="block text-slate-700 text-sm font-semibold mb-2">
-        {label}
+        {label} <span className="text-red-500">*</span>
       </label>
 
       <div className="relative">
@@ -212,11 +223,16 @@ function LocationSearch({
           value={value}
           placeholder={placeholder}
           onFocus={() => setShowSuggestions(true)}
+          onBlur={() => setTouched(true)}
           onChange={(e) => {
             onChange(e.target.value);
             setShowSuggestions(true);
           }}
-          className="w-full pl-10 pr-10 py-3 rounded-xl border-2 border-slate-200 focus:border-[#27788e] outline-none transition-all"
+          className={`w-full pl-10 pr-10 py-3 rounded-xl border-2 outline-none transition-all ${
+            showError
+              ? "border-red-500 focus:border-red-500"
+              : "border-slate-200 focus:border-[#27788e]"
+          }`}
         />
 
         {isLoading && (
@@ -226,6 +242,13 @@ function LocationSearch({
         )}
       </div>
 
+      {showError && (
+        <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" />
+          {error}
+        </p>
+      )}
+
       {showSuggestions && suggestions.length > 0 && (
         <div className="absolute z-50 mt-2 w-full max-h-72 overflow-y-auto rounded-xl border bg-white shadow-xl">
           {suggestions.map((loc) => (
@@ -233,24 +256,20 @@ function LocationSearch({
               key={loc.id}
               type="button"
               onClick={() => {
-                console.log("Selected location:", loc); // Debug log
                 onSelect(loc);
                 onChange(loc.name);
                 setShowSuggestions(false);
+                setTouched(true);
               }}
               className="flex w-full gap-3 px-4 py-3 hover:bg-slate-50 text-left"
             >
               <MapPin className="mt-1 h-4 w-4 text-slate-400 flex-shrink-0" />
-
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm text-slate-800 truncate">
                   {loc.name}
                 </p>
-
                 <p className="text-xs text-slate-500 truncate">
-                  {[loc.city, loc.state, loc.country]
-                    .filter(Boolean)
-                    .join(", ")}
+                  {[loc.city, loc.state, loc.country].filter(Boolean).join(", ")}
                 </p>
               </div>
             </button>
@@ -275,14 +294,24 @@ function TripTypeStep({ onContinue }: { onContinue: (type: TripType) => void }) 
           <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-3"><ArrowRight className="w-7 h-7 text-blue-600" /></div>
           <h3 className="font-bold text-[#1e355c] text-lg">One Way</h3>
           <p className="text-slate-500 text-sm mt-1">Single destination trip</p>
+          {tripType === "one-way" && (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-[#27788e] text-white rounded-full text-xs font-medium">
+              <CheckCircle2 className="w-3 h-3" /> Selected
+            </div>
+          )}
         </button>
         <button onClick={() => setTripType("round-trip")} className={`p-6 rounded-2xl border-2 text-center transition-all ${tripType === "round-trip" ? "border-[#27788e] bg-[#27788e]/5 shadow-lg" : "border-slate-200"}`}>
           <div className="w-14 h-14 rounded-full bg-teal-50 flex items-center justify-center mx-auto mb-3"><ArrowLeftRight className="w-7 h-7 text-teal-600" /></div>
           <h3 className="font-bold text-[#1e355c] text-lg">Round Trip</h3>
           <p className="text-slate-500 text-sm mt-1">Return to starting point</p>
+          {tripType === "round-trip" && (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-[#27788e] text-white rounded-full text-xs font-medium">
+              <CheckCircle2 className="w-3 h-3" /> Selected
+            </div>
+          )}
         </button>
       </div>
-      <button onClick={() => onContinue(tripType)} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white font-semibold shadow-lg">
+      <button onClick={() => onContinue(tripType)} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white font-semibold shadow-lg hover:shadow-xl transition-all">
         Continue <ArrowRight className="w-4 h-4" />
       </button>
     </motion.div>
@@ -290,11 +319,31 @@ function TripTypeStep({ onContinue }: { onContinue: (type: TripType) => void }) 
 }
 
 // ─── Step 2: Destination ──────────────────────────────────────────────────────
-function DestinationStep({ onContinue, tripType }: { onContinue: (data: { from: Location | null; to: Location | null }) => void; tripType: TripType; }) {
-  const [fromLocation, setFromLocation] = useState<Location | null>(null);
-  const [toLocation, setToLocation] = useState<Location | null>(null);
-  const [fromQuery, setFromQuery] = useState("");
-  const [toQuery, setToQuery] = useState("");
+function DestinationStep({ onContinue, tripType, initialFrom, initialTo }: { 
+  onContinue: (data: { from: Location | null; to: Location | null }) => void; 
+  tripType: TripType;
+  initialFrom?: Location | null;
+  initialTo?: Location | null;
+}) {
+  const [fromLocation, setFromLocation] = useState<Location | null>(initialFrom || null);
+  const [toLocation, setToLocation] = useState<Location | null>(initialTo || null);
+  const [fromQuery, setFromQuery] = useState(initialFrom?.name || "");
+  const [toQuery, setToQuery] = useState(initialTo?.name || "");
+  const [errors, setErrors] = useState<{ from?: string; to?: string }>({});
+
+  const validate = () => {
+    const newErrors: { from?: string; to?: string } = {};
+    if (!fromLocation) newErrors.from = "Please select a starting location";
+    if (!toLocation) newErrors.to = "Please select a destination";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleContinue = () => {
+    if (validate() && fromLocation && toLocation) {
+      onContinue({ from: fromLocation, to: toLocation });
+    }
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4 }} className="space-y-6">
@@ -306,17 +355,37 @@ function DestinationStep({ onContinue, tripType }: { onContinue: (data: { from: 
         <div className="relative">
           <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center z-10"><CircleDot className="w-3.5 h-3.5 text-white" /></div>
           <div className="pl-6">
-            <LocationSearch label={tripType === "round-trip" ? "Starting Point" : "From"} placeholder="Enter origin location..." value={fromQuery} onChange={setFromQuery} onSelect={(loc) => { setFromLocation(loc); setFromQuery(loc.name); }} icon={<Navigation className="w-4 h-4" />} />
+            <LocationSearch 
+              label={tripType === "round-trip" ? "Starting Point" : "From"} 
+              placeholder="Enter origin location..." 
+              value={fromQuery} 
+              onChange={setFromQuery} 
+              onSelect={(loc) => { setFromLocation(loc); setFromQuery(loc.name); }} 
+              icon={<Navigation className="w-4 h-4" />}
+              error={errors.from}
+            />
           </div>
         </div>
         <div className="relative">
           <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center z-10"><Circle className="w-3.5 h-3.5 text-white" /></div>
           <div className="pl-6">
-            <LocationSearch label={tripType === "round-trip" ? "Destination (Return Trip)" : "To"} placeholder="Enter destination..." value={toQuery} onChange={setToQuery} onSelect={(loc) => { setToLocation(loc); setToQuery(loc.name); }} icon={<MapPin className="w-4 h-4" />} />
+            <LocationSearch 
+              label={tripType === "round-trip" ? "Destination (Return Trip)" : "To"} 
+              placeholder="Enter destination..." 
+              value={toQuery} 
+              onChange={setToQuery} 
+              onSelect={(loc) => { setToLocation(loc); setToQuery(loc.name); }} 
+              icon={<MapPin className="w-4 h-4" />}
+              error={errors.to}
+            />
           </div>
         </div>
       </div>
-      <button disabled={!fromLocation || !toLocation} onClick={() => { if (fromLocation && toLocation) onContinue({ from: fromLocation, to: toLocation }); }} className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold transition-all ${fromLocation && toLocation ? "bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white shadow-lg" : "bg-slate-100 text-slate-400"}`}>
+      <button 
+        disabled={!fromLocation || !toLocation} 
+        onClick={handleContinue} 
+        className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold transition-all ${fromLocation && toLocation ? "bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white shadow-lg hover:shadow-xl" : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
+      >
         Continue <ArrowRight className="w-4 h-4" />
       </button>
     </motion.div>
@@ -324,21 +393,50 @@ function DestinationStep({ onContinue, tripType }: { onContinue: (data: { from: 
 }
 
 // ─── Step 3: Details ──────────────────────────────────────────────────────────
-function DetailsStep({ onContinue }: { onContinue: (d: { startDate: string; endDate: string; duration: number; isOneDayTrip: boolean }) => void; }) {
+function DetailsStep({ onContinue, initialDetails }: { 
+  onContinue: (d: { startDate: string; endDate: string; duration: number; isOneDayTrip: boolean }) => void;
+  initialDetails?: { startDate: string; endDate: string; duration: number; isOneDayTrip: boolean };
+}) {
   const today = new Date().toISOString().split('T')[0];
-  const [startDate, setStartDate] = useState(today);
-  const [endDate, setEndDate] = useState("");
-  const [duration, setDuration] = useState(1);
-  const [isOneDayTrip, setIsOneDayTrip] = useState(false);
+  const [startDate, setStartDate] = useState(initialDetails?.startDate || today);
+  const [endDate, setEndDate] = useState(initialDetails?.endDate || "");
+  const [duration, setDuration] = useState(initialDetails?.duration || 1);
+  const [isOneDayTrip, setIsOneDayTrip] = useState(initialDetails?.isOneDayTrip || false);
+  const [errors, setErrors] = useState<{ startDate?: string; endDate?: string }>({});
 
   useEffect(() => {
-    if (startDate && endDate) {
+    if (startDate && endDate && !isOneDayTrip) {
       const start = new Date(startDate);
       const end = new Date(endDate);
-      const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1; 
+      const diffTime = Math.abs(end.getTime() - start.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
       setDuration(diffDays);
+    } else if (isOneDayTrip) {
+      setDuration(1);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, isOneDayTrip]);
+
+  const validate = () => {
+    const newErrors: { startDate?: string; endDate?: string } = {};
+    if (!startDate) newErrors.startDate = "Start date is required";
+    if (!endDate && !isOneDayTrip) newErrors.endDate = "End date is required";
+    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+      newErrors.endDate = "End date must be after start date";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleContinue = () => {
+    if (validate()) {
+      onContinue({ 
+        startDate, 
+        endDate: isOneDayTrip ? startDate : endDate, 
+        duration: isOneDayTrip ? 1 : duration, 
+        isOneDayTrip 
+      });
+    }
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4 }} className="space-y-6">
@@ -352,30 +450,66 @@ function DetailsStep({ onContinue }: { onContinue: (d: { startDate: string; endD
             <Clock className="w-5 h-5 text-[#27788e]" />
             <div><p className="font-semibold text-slate-700 text-sm">1 Day Trip</p></div>
           </div>
-          <button onClick={() => setIsOneDayTrip(!isOneDayTrip)} className={`relative w-12 h-6 rounded-full transition-all ${isOneDayTrip ? "bg-[#27788e]" : "bg-slate-300"}`}>
+          <button 
+            onClick={() => { 
+              setIsOneDayTrip(!isOneDayTrip); 
+              if (!isOneDayTrip) {
+                setEndDate(startDate);
+                setDuration(1);
+              }
+            }} 
+            className={`relative w-12 h-6 rounded-full transition-all ${isOneDayTrip ? "bg-[#27788e]" : "bg-slate-300"}`}
+          >
             <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${isOneDayTrip ? "right-0.5" : "left-0.5"}`} />
           </button>
         </div>
-        {!isOneDayTrip && (
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-slate-700 text-sm font-semibold mb-2">Start Date</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input type="date" value={startDate} min={today} onChange={(e) => { setStartDate(e.target.value); if (endDate && e.target.value > endDate) setEndDate(""); }} className="w-full pl-10 pr-3 py-3 rounded-xl border-2 border-slate-200 focus:border-[#27788e] outline-none" />
-              </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-slate-700 text-sm font-semibold mb-2">Start Date <span className="text-red-500">*</span></label>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input 
+                type="date" 
+                value={startDate} 
+                min={today} 
+                onChange={(e) => { setStartDate(e.target.value); if (endDate && e.target.value > endDate) setEndDate(""); }} 
+                className={`w-full pl-10 pr-3 py-3 rounded-xl border-2 outline-none transition-all ${
+                  errors.startDate ? "border-red-500 focus:border-red-500" : "border-slate-200 focus:border-[#27788e]"
+                }`}
+              />
             </div>
-            <div>
-              <label className="block text-slate-700 text-sm font-semibold mb-2">End Date</label>
-              <div className="relative">
-                <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input type="date" value={endDate} min={startDate || today} onChange={(e) => setEndDate(e.target.value)} className="w-full pl-10 pr-3 py-3 rounded-xl border-2 border-slate-200 focus:border-[#27788e] outline-none" />
-              </div>
+            {errors.startDate && <p className="mt-1 text-xs text-red-500">{errors.startDate}</p>}
+          </div>
+          <div>
+            <label className="block text-slate-700 text-sm font-semibold mb-2">End Date {!isOneDayTrip && <span className="text-red-500">*</span>}</label>
+            <div className="relative">
+              <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input 
+                type="date" 
+                value={endDate} 
+                min={startDate || today} 
+                disabled={isOneDayTrip}
+                onChange={(e) => setEndDate(e.target.value)} 
+                className={`w-full pl-10 pr-3 py-3 rounded-xl border-2 outline-none transition-all ${
+                  isOneDayTrip ? "bg-slate-50 cursor-not-allowed" : ""
+                } ${
+                  errors.endDate ? "border-red-500 focus:border-red-500" : "border-slate-200 focus:border-[#27788e]"
+                }`}
+              />
             </div>
+            {errors.endDate && <p className="mt-1 text-xs text-red-500">{errors.endDate}</p>}
+          </div>
+        </div>
+        {!isOneDayTrip && duration > 0 && (
+          <div className="text-center p-2 bg-blue-50 rounded-xl">
+            <p className="text-sm text-slate-600">Duration: <span className="font-bold text-[#1e355c]">{duration} day{duration > 1 ? "s" : ""}</span></p>
           </div>
         )}
       </div>
-      <button onClick={() => onContinue({ startDate, endDate, duration: isOneDayTrip ? 1 : duration, isOneDayTrip })} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white font-semibold shadow-lg">
+      <button 
+        onClick={handleContinue} 
+        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+      >
         Continue <ArrowRight className="w-4 h-4" />
       </button>
     </motion.div>
@@ -384,25 +518,29 @@ function DetailsStep({ onContinue }: { onContinue: (d: { startDate: string; endD
 
 // ─── Step 4: Style & Cost Estimate ────────────────────────────────────────────
 function StyleStep({ 
-  onContinue, origin, destination, originCountry 
+  onContinue, origin, destination, originCountry, initialTransport
 }: { 
   onContinue: (style: Record<string, string>) => void;
   origin: Location | null; destination: Location | null; originCountry: string;
+  initialTransport?: string;
 }) {
-  const [transport, setTransport] = useState("flight");
+  const [transport, setTransport] = useState(initialTransport || "flight");
   const [recommendedMode, setRecommendedMode] = useState("flight");
   const [travelTimes, setTravelTimes] = useState<Record<string, string>>({});
   const [travelCosts, setTravelCosts] = useState<Record<string, {min: number, max: number}>>({});
+  const [distance, setDistance] = useState<number | null>(null);
 
   const CURRENCY_MAP: Record<string, string> = {
-    "USA": "$", "United States": "$", "India": "₹", "UK": "£", "United Kingdom": "£", "France": "€", "Germany": "€", "Japan": "¥", "Australia": "A$"
+    "USA": "$", "United States": "$", "India": "₹", "UK": "£", "United Kingdom": "£", 
+    "France": "€", "Germany": "€", "Japan": "¥", "Australia": "A$"
   };
   const symbol = CURRENCY_MAP[originCountry] || "$";
   const rateMultiplier = symbol === "₹" ? 83 : (symbol === "€" ? 0.9 : (symbol === "£" ? 0.8 : 1));
 
   useEffect(() => {
     if (origin?.lat && origin?.lng && destination?.lat && destination?.lng) {
-      const distance = getDistanceInKm(origin.lat, origin.lng, destination.lat, destination.lng);
+      const dist = getDistanceInKm(origin.lat, origin.lng, destination.lat, destination.lng);
+      setDistance(dist);
       
       const formatTime = (hours: number) => {
         const h = Math.floor(hours);
@@ -410,41 +548,44 @@ function StyleStep({
         return h === 0 ? `${m}m` : `${h}h ${m}m`;
       };
 
-      setTravelTimes({
-        flight: formatTime((distance / 800) + 3),
-        train: formatTime((distance / 120) + 1),
-        bus: formatTime((distance / 90) + 0.5),
-        car: formatTime(distance / 80),
-        bike: formatTime(distance / 60)
+      const times: Record<string, string> = {};
+      const costs: Record<string, {min: number, max: number}> = {};
+      
+      TRANSPORT_OPTIONS.forEach(opt => {
+        const timeHours = dist / (opt.speedKmh || 100) + (opt.id === "flight" ? 2 : 0.5);
+        times[opt.id] = formatTime(timeHours);
+        
+        const baseCost = dist * (opt.costPerKm || 0.05) * rateMultiplier;
+        costs[opt.id] = { 
+          min: Math.round(baseCost * 0.8), 
+          max: Math.round(baseCost * 1.2) 
+        };
       });
 
-      // Cost Logic: Public transit per km. Private transit fuel cost (Avg $1.10/L base)
-      setTravelCosts({
-        flight: { min: Math.round(distance * 0.12 * rateMultiplier), max: Math.round(distance * 0.30 * rateMultiplier) },
-        train: { min: Math.round(distance * 0.04 * rateMultiplier), max: Math.round(distance * 0.12 * rateMultiplier) },
-        bus: { min: Math.round(distance * 0.03 * rateMultiplier), max: Math.round(distance * 0.08 * rateMultiplier) },
-        car: { // Assumes 10km/L (max cost) to 18km/L (min cost)
-          min: Math.round((distance / 18) * 1.10 * rateMultiplier), 
-          max: Math.round((distance / 10) * 1.10 * rateMultiplier) 
-        },
-        bike: { // Assumes 30km/L to 50km/L
-          min: Math.round((distance / 50) * 1.10 * rateMultiplier), 
-          max: Math.round((distance / 30) * 1.10 * rateMultiplier) 
-        }
-      });
+      setTravelTimes(times);
+      setTravelCosts(costs);
 
-      if (distance < 50) { setRecommendedMode("bike"); setTransport("bike"); }
-      else if (distance < 200) { setRecommendedMode("car"); setTransport("car"); }
-      else if (distance < 600) { setRecommendedMode("train"); setTransport("train"); }
-      else { setRecommendedMode("flight"); setTransport("flight"); }
+      // Smart recommendation based on distance
+      if (dist < 50) { setRecommendedMode("bike"); }
+      else if (dist < 200) { setRecommendedMode("car"); }
+      else if (dist < 600) { setRecommendedMode("train"); }
+      else { setRecommendedMode("flight"); }
+      
+      // Only set transport if not already set by user
+      if (!initialTransport) {
+        setTransport(recommendedMode);
+      }
     }
-  }, [origin, destination, symbol, rateMultiplier]);
+  }, [origin, destination]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4 }} className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl md:text-3xl font-bold text-[#1e355c]">Transportation</h2>
         <p className="text-slate-500 mt-1">Select your preferred way to travel</p>
+        {distance && (
+          <p className="text-sm text-slate-400 mt-2">Distance: <span className="font-semibold">{Math.round(distance)} km</span></p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -452,6 +593,7 @@ function StyleStep({
           const active = transport === opt.id;
           const isRecommended = recommendedMode === opt.id;
           const costs = travelCosts[opt.id];
+          const time = travelTimes[opt.id];
           
           return (
             <button
@@ -462,22 +604,30 @@ function StyleStep({
             >
               {isRecommended && (
                 <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[#14b8a6] text-white text-[10px] font-bold rounded-full uppercase whitespace-nowrap shadow-sm">
-                  Recommended
+                  Best Option
                 </div>
               )}
               <div className={`flex justify-center mb-2 ${active ? "text-[#27788e]" : "text-slate-400"}`}>{opt.icon}</div>
               <div className={`font-semibold text-sm ${active ? "text-[#1e355c]" : "text-slate-600"}`}>{opt.label}</div>
               
               <div className="text-[#14b8a6] font-semibold text-xs mt-1">
-                {travelTimes[opt.id] ? `${travelTimes[opt.id]} • ` : ""}
+                {time ? `${time} • ` : ""}
                 {costs && costs.max > 0 ? `${symbol}${costs.min} - ${symbol}${costs.max}` : (costs ? "Free" : opt.desc)}
               </div>
+              {active && (
+                <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 bg-[#27788e] text-white rounded-full text-[9px] font-medium">
+                  <CheckCircle2 className="w-2.5 h-2.5" /> Selected
+                </div>
+              )}
             </button>
           );
         })}
       </div>
 
-      <button onClick={() => onContinue({ transport })} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white font-semibold shadow-lg">
+      <button 
+        onClick={() => onContinue({ transport })} 
+        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-[#1e355c] to-[#27788e] text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+      >
         Continue <ArrowRight className="w-4 h-4" />
       </button>
     </motion.div>
@@ -492,6 +642,8 @@ function ReviewStep({
   details: { startDate: string; endDate: string; duration: number; isOneDayTrip: boolean };
   style: Record<string, string>; onGenerate: () => void;
 }) {
+  const transportLabel = TRANSPORT_OPTIONS.find(t => t.id === style.transport)?.label || style.transport;
+
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4 }} className="space-y-6">
       <div className="text-center">
@@ -501,8 +653,16 @@ function ReviewStep({
 
       <div className="space-y-4">
         <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+          <span className="text-sm text-slate-600">Trip Type</span>
+          <span className="font-semibold text-[#1e355c] capitalize">{tripType === "round-trip" ? "Round Trip" : "One Way"}</span>
+        </div>
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
           <span className="text-sm text-slate-600">Route</span>
           <span className="font-semibold text-[#1e355c]">{from?.name} → {to?.name}</span>
+        </div>
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+          <span className="text-sm text-slate-600">Duration</span>
+          <span className="font-semibold text-[#1e355c]">{details.isOneDayTrip ? "1 Day Trip" : `${details.duration} Days`}</span>
         </div>
         <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
           <span className="text-sm text-slate-600">Dates</span>
@@ -512,11 +672,14 @@ function ReviewStep({
         </div>
         <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
           <span className="text-sm text-slate-600">Transport</span>
-          <span className="font-semibold text-[#1e355c] capitalize">{style.transport}</span>
+          <span className="font-semibold text-[#1e355c] capitalize">{transportLabel}</span>
         </div>
       </div>
 
-      <button onClick={onGenerate} className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-[#14b8a6] to-[#27788e] text-white font-bold text-lg shadow-xl hover:shadow-2xl transition-all">
+      <button 
+        onClick={onGenerate} 
+        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-gradient-to-r from-[#14b8a6] to-[#27788e] text-white font-bold text-lg shadow-xl hover:shadow-2xl transition-all"
+      >
         <Sparkles className="w-5 h-5" /> Generate Itinerary <ArrowRight className="w-5 h-5" />
       </button>
     </motion.div>
@@ -541,6 +704,7 @@ function GeneratingScreen() {
       </div>
       <div className="text-center">
         <h3 className="text-xl font-bold text-[#1e355c]">Creating Your Itinerary</h3>
+        <p className="text-slate-500 text-sm">Our AI is crafting the perfect trip for you...</p>
       </div>
       <div className="w-64 space-y-2">
         <div className="flex justify-between text-xs text-slate-400"><span>Progress</span><span className="font-semibold text-[#14b8a6]">{Math.round(progress)}%</span></div>
@@ -561,63 +725,147 @@ export default function CreateTripPage() {
   const [details, setDetails] = useState<{ startDate: string; endDate: string; duration: number; isOneDayTrip: boolean; } | null>(null);
   const [style, setStyle] = useState<Record<string, string> | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
   const router = useRouter();
+
+  // ─── Load saved data from sessionStorage only on first load ──────────────────
+  useEffect(() => {
+    if (isFirstLoad) {
+      // Check if we should clear data (if coming from navigation)
+      const shouldClear = sessionStorage.getItem('clearTripData');
+      if (shouldClear === 'true') {
+        sessionStorage.removeItem('clearTripData');
+        const keysToRemove = ['fromLocation', 'toLocation', 'details', 'style', 'tripType'];
+        keysToRemove.forEach(key => sessionStorage.removeItem(key));
+        setIsFirstLoad(false);
+        return;
+      }
+
+      const savedFrom = sessionStorage.getItem('fromLocation');
+      const savedTo = sessionStorage.getItem('toLocation');
+      const savedDetails = sessionStorage.getItem('details');
+      const savedStyle = sessionStorage.getItem('style');
+      const savedTripType = sessionStorage.getItem('tripType');
+      
+      if (savedFrom) setFromLocation(JSON.parse(savedFrom));
+      if (savedTo) setToLocation(JSON.parse(savedTo));
+      if (savedDetails) setDetails(JSON.parse(savedDetails));
+      if (savedStyle) setStyle(JSON.parse(savedStyle));
+      if (savedTripType) setTripType(savedTripType as TripType);
+      
+      setIsFirstLoad(false);
+    }
+  }, [isFirstLoad]);
+
+  // ─── Save data to sessionStorage ──────────────────────────────────────────
+  useEffect(() => {
+    if (!isFirstLoad) {
+      if (fromLocation) sessionStorage.setItem('fromLocation', JSON.stringify(fromLocation));
+      if (toLocation) sessionStorage.setItem('toLocation', JSON.stringify(toLocation));
+      if (details) sessionStorage.setItem('details', JSON.stringify(details));
+      if (style) sessionStorage.setItem('style', JSON.stringify(style));
+      if (tripType) sessionStorage.setItem('tripType', tripType);
+    }
+  }, [fromLocation, toLocation, details, style, tripType, isFirstLoad]);
 
   const handleContinue = () => {
     const steps: Step[] = ["trip-type", "destination", "details", "style", "review"];
     const currentIndex = steps.indexOf(step);
-    if (currentIndex < steps.length - 1) { setStep(steps[currentIndex + 1]); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    if (currentIndex < steps.length - 1) { 
+      setStep(steps[currentIndex + 1]); 
+      window.scrollTo({ top: 0, behavior: "smooth" }); 
+    }
   };
 
   const handleBack = () => {
     const steps: Step[] = ["trip-type", "destination", "details", "style", "review"];
     const currentIndex = steps.indexOf(step);
-    if (currentIndex > 0) { setStep(steps[currentIndex - 1]); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    if (currentIndex > 0) { 
+      setStep(steps[currentIndex - 1]); 
+      window.scrollTo({ top: 0, behavior: "smooth" }); 
+    }
   };
 
   const handleStepClick = (targetStep: Step) => {
     const steps: Step[] = ["trip-type", "destination", "details", "style", "review"];
     const currentIndex = steps.indexOf(step);
     const targetIndex = steps.indexOf(targetStep);
-    if (targetIndex <= currentIndex) { setStep(targetStep); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    if (targetIndex <= currentIndex) { 
+      setStep(targetStep); 
+      window.scrollTo({ top: 0, behavior: "smooth" }); 
+    }
   };
 
   const handleGenerate = async () => {
-  setIsGenerating(true);
-  try {
-    console.log("From Location:", fromLocation); // Debug log
-    console.log("To Location:", toLocation); // Debug log
-    
-    const response = await fetch('/api/trips', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        trip_type: tripType,                               
-        origin_name: fromLocation?.name || null,           
+    setIsGenerating(true);
+    try {
+      const tripData = {
+        trip_type: tripType,
+        origin_name: fromLocation?.name || null,
+        origin_lat: fromLocation?.lat || null,
+        origin_lng: fromLocation?.lng || null,
         destination_name: toLocation?.name || "Unknown",
         destination_lat: toLocation?.lat || null,
         destination_lng: toLocation?.lng || null,
-        start_date: details?.startDate,
-        end_date: details?.endDate,
+        start_date: details?.startDate || null,
+        end_date: details?.endDate || null,
         trip_days: details?.duration || 1,
         travel_mode: style?.transport || "flight",
-        pace: "balanced", 
-        wake_up: "mid", 
+        pace: "balanced",
+        wake_up: "mid",
         interests: [],
         status: "planning",
-      }),
-    });
+        budget: "comfort",
+      };
 
-    if (!response.ok) throw new Error("Failed to save trip");
-    const data = await response.json();
-    if (data.trip && data.trip.id) router.push(`/itinerary/${data.trip.id}`);
-  } catch (error) {
-    console.error("Error generating trip:", error);
-    setIsGenerating(false);
+      const response = await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tripData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save trip");
+      }
+      
+      const data = await response.json();
+      
+      // ─── CLEAR ALL SESSION STORAGE DATA ───
+      // Set a flag to clear data on next load
+      sessionStorage.setItem('clearTripData', 'true');
+      
+      // Also clear current session data
+      const keysToRemove = ['fromLocation', 'toLocation', 'details', 'style', 'tripType'];
+      keysToRemove.forEach(key => sessionStorage.removeItem(key));
+      
+      // Reset state
+      setFromLocation(null);
+      setToLocation(null);
+      setDetails(null);
+      setStyle(null);
+      setTripType("one-way");
+      setStep("trip-type");
+      
+      if (data.trip && data.trip.id) {
+        router.push(`/itinerary/${data.trip.id}`);
+      }
+    } catch (error) {
+      console.error("❌ Error generating trip:", error);
+      alert(error instanceof Error ? error.message : "Failed to generate trip");
+      setIsGenerating(false);
+    }
+  };
+
+  if (isGenerating) {
+    return (
+      <div className="min-h-screen bg-[#f8fafb] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
+          <GeneratingScreen />
+        </div>
+      </div>
+    );
   }
-};
-
-  if (isGenerating) return (<div className="min-h-screen bg-[#f8fafb] flex items-center justify-center p-6"><div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8"><GeneratingScreen /></div></div>);
 
   const currentIndex = STEPS.findIndex(s => s.id === step);
 
@@ -625,28 +873,96 @@ export default function CreateTripPage() {
     <div className="min-h-screen bg-[#f8fafb] p-4 md:p-6">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-[#1e355c] tracking-tight">Create Your <span className="bg-gradient-to-r from-blue-600 to-teal-500 bg-clip-text text-transparent">Perfect Trip</span></h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-[#1e355c] tracking-tight">
+            Create Your <span className="bg-gradient-to-r from-blue-600 to-teal-500 bg-clip-text text-transparent">Perfect Trip</span>
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">Let AI craft a personalized itinerary just for you</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-4 mb-6"><StepProgress current={step} onStepClick={handleStepClick} /></div>
+        <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
+          <StepProgress current={step} onStepClick={handleStepClick} />
+        </div>
 
         <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/50 p-6 md:p-8">
           <AnimatePresence mode="wait">
-            {step === "trip-type" && <TripTypeStep key="trip-type" onContinue={(type) => { setTripType(type); handleContinue(); }} />}
-            {step === "destination" && <DestinationStep key="destination" tripType={tripType} onContinue={(d) => { setFromLocation(d.from); setToLocation(d.to); handleContinue(); }} />}
-            {step === "details" && <DetailsStep key="details" onContinue={(d) => { setDetails(d); handleContinue(); }} />}
-            {step === "style" && <StyleStep key="style" origin={fromLocation} destination={toLocation} originCountry={fromLocation?.country || "USA"} onContinue={(s) => { setStyle(s); handleContinue(); }} />}
-            {step === "review" && <ReviewStep key="review" tripType={tripType} from={fromLocation} to={toLocation} details={details!} style={style!} onGenerate={handleGenerate} />}
+            {step === "trip-type" && (
+              <TripTypeStep 
+                key="trip-type" 
+                onContinue={(type) => { 
+                  setTripType(type); 
+                  handleContinue(); 
+                }} 
+              />
+            )}
+            {step === "destination" && (
+              <DestinationStep 
+                key="destination" 
+                tripType={tripType} 
+                initialFrom={fromLocation}
+                initialTo={toLocation}
+                onContinue={(d) => { 
+                  setFromLocation(d.from); 
+                  setToLocation(d.to); 
+                  handleContinue(); 
+                }} 
+              />
+            )}
+            {step === "details" && (
+              <DetailsStep 
+                key="details" 
+                initialDetails={details || undefined}
+                onContinue={(d) => { 
+                  setDetails(d); 
+                  handleContinue(); 
+                }} 
+              />
+            )}
+            {step === "style" && (
+              <StyleStep 
+                key="style" 
+                origin={fromLocation} 
+                destination={toLocation} 
+                originCountry={fromLocation?.country || "USA"} 
+                initialTransport={style?.transport}
+                onContinue={(s) => { 
+                  setStyle(s); 
+                  handleContinue(); 
+                }} 
+              />
+            )}
+            {step === "review" && (
+              <ReviewStep 
+                key="review" 
+                tripType={tripType} 
+                from={fromLocation} 
+                to={toLocation} 
+                details={details!} 
+                style={style!} 
+                onGenerate={handleGenerate} 
+              />
+            )}
           </AnimatePresence>
 
           {currentIndex > 0 && step !== "review" && !isGenerating && (
             <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-100">
-              <button onClick={handleBack} className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-xl text-sm font-medium"><ArrowLeft className="w-4 h-4" /> Back</button>
+              <button 
+                onClick={handleBack} 
+                className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-xl transition-all text-sm font-medium"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+              <div className="text-xs text-slate-400">Step {currentIndex + 1} of {STEPS.length}</div>
             </div>
           )}
           {step === "review" && !isGenerating && (
             <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-100">
-              <button onClick={handleBack} className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-xl text-sm font-medium"><ArrowLeft className="w-4 h-4" /> Back to Edit</button>
+              <button 
+                onClick={handleBack} 
+                className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-50 rounded-xl transition-all text-sm font-medium"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back to Edit
+              </button>
+              <div className="text-xs text-slate-400">Ready to generate</div>
             </div>
           )}
         </div>

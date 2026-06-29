@@ -79,7 +79,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside 
         className={`
-          fixed lg:relative inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-100 
+          fixed lg:relative inset-y-0 left-0 z-50 w-70 bg-white border-r border-slate-100 
           flex flex-col transition-transform duration-300 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
@@ -128,15 +128,26 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* User Section */}
         <div className="p-3 border-t border-slate-100">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center">
               <span className="text-white font-bold text-sm">{userInitials}</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-slate-900 truncate font-semibold text-sm">{userName}</div>
-              <div className="text-slate-400 truncate text-xs">{userEmail}</div>
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="text-slate-900 truncate font-semibold text-sm">
+                  {userName}
+                </div>
+                <div className="text-slate-400 truncate text-xs">
+                  {userEmail}
+                </div>
+              </div>
+
+              <LogOut
+                className="w-5 h-5 text-slate-400 cursor-pointer hover:text-red-600 transition-colors ml-3 flex-shrink-0"
+                onClick={() => signOut({ callbackUrl: "/" })}
+              />
             </div>
           </div>
-          <div className="flex gap-2">
+          {/* <div className="flex gap-2">
             <button
               onClick={() => router.push("/settings")}
               className="flex-1 rounded-xl bg-slate-50 px-3 py-2 text-slate-700 text-sm font-medium hover:bg-slate-100 transition"
@@ -149,7 +160,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             >
               Sign Out
             </button>
-          </div>
+          </div> */}
         </div>
       </aside>
 
@@ -159,7 +170,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <header className="h-16 bg-white border-b border-slate-100 flex items-center px-4 sm:px-6 gap-4 flex-shrink-0">
           {/* Hamburger Menu Button - Mobile Only */}
           <button 
-            className="lg:hidden p-2 rounded-lg hover:bg-slate-100 transition-colors" 
+            className="flex p-2 rounded-lg hover:bg-slate-100 transition-colors" 
             onClick={() => setSidebarOpen(true)}
           >
             <Menu className="w-5 h-5 text-slate-600" />
@@ -202,7 +213,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">SK</span>
+                  <span className="text-white font-bold text-sm">{userInitials}</span>
                 </div>
                 <ChevronDown className="w-4 h-4 text-slate-500" />
               </button>
