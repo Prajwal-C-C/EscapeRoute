@@ -73,7 +73,7 @@ export default function Dashboard() {
         <main className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-slate-900 font-extrabold text-3xl">Good morning, Sarah</h1>
+              <h1 className="text-slate-900 font-extrabold text-3xl">Welcome, Sarah</h1>
               <p className="text-slate-500 mt-0.5 text-sm sm:text-base">You have 2 upcoming trips. Time to explore!</p>
             </div>
             <button

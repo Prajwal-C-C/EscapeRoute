@@ -2,16 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react"; 
 import {
-  Calendar,
-  Compass,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Settings,
-  Star,
-  Users,
-  X,
+  Calendar, Compass, LayoutDashboard, LogOut,
+  Menu, Settings, Star, Users, X,
 } from "lucide-react";
 
 const navItems = [
@@ -23,11 +17,7 @@ const navItems = [
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
-interface SidebarContentProps {
-  onNavigate: (path: string) => void;
-}
-
-function SidebarContent({ onNavigate }: SidebarContentProps) {
+function SidebarContent({ onNavigate }: { onNavigate: (path: string) => void }) {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-6 py-6 border-b border-slate-100">
@@ -52,7 +42,7 @@ function SidebarContent({ onNavigate }: SidebarContentProps) {
 
       <div className="p-4 border-t border-slate-100">
         <button
-          onClick={() => onNavigate("/login")}
+          onClick={() => signOut({ callbackUrl: "/" })}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-colors"
         >
           <LogOut className="w-5 h-5" />
@@ -66,7 +56,6 @@ function SidebarContent({ onNavigate }: SidebarContentProps) {
 export function Sidebar() {
   const router = useRouter();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-
   const handleNavigate = (path: string) => {
     setIsMobileOpen(false);
     router.push(path);
@@ -74,22 +63,10 @@ export function Sidebar() {
 
   return (
     <>
-      <button
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg"
-        aria-label="Toggle dashboard navigation"
-      >
+      <button onClick={() => setIsMobileOpen(!isMobileOpen)} className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg">
         {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
-
-      {isMobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setIsMobileOpen(false)}>
-          <div className="fixed left-0 top-0 bottom-0 w-64 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <SidebarContent onNavigate={handleNavigate} />
-          </div>
-        </div>
-      )}
-
+      {isMobileOpen && <div className="lg:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setIsMobileOpen(false)}><div className="fixed left-0 top-0 bottom-0 w-64 bg-white shadow-xl"><SidebarContent onNavigate={handleNavigate} /></div></div>}
       <div className="hidden lg:block fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-slate-100">
         <SidebarContent onNavigate={handleNavigate} />
       </div>

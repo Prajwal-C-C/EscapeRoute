@@ -6,10 +6,10 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { 
   Mail, Lock, User, Eye, EyeOff, 
-  ArrowRight, X
+  ArrowRight, X, Check
 } from "lucide-react";
 import { FaGithub as GitHub } from "react-icons/fa";
-
+import { signIn } from "next-auth/react";
 
 interface AuthModalProps {
   isLogin: boolean;
@@ -21,23 +21,69 @@ export function AuthModal({ isLogin, onClose, onToggleMode }: AuthModalProps) {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    await signIn("google", { callbackUrl: "/dashboard" });
+  };
+
+  const handleGithubLogin = async () => {
+    setIsLoading(true);
+    await signIn("github", { callbackUrl: "/dashboard" });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+
+    if (!isLogin) {
+      // A. REGISTER LOGIC
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify(form),
+        headers: { "Content-Type": "application/json" }
+      });
+
+      if (res.ok) {
+        // B. AUTOMATIC LOGIN AFTER REGISTRATION
+        const signInResult = await signIn("credentials", {
+          email: form.email,
+          password: form.password,
+          redirect: false,
+        });
+
+        if (signInResult?.error) {
+          alert("Registration successful, but login failed: " + signInResult.error);
+        } else {
+          onClose(); 
+          router.push("/dashboard"); 
+        }
+      } else {
+        const errorData = await res.json();
+        alert(errorData.error || "Registration failed.");
+      }
+    } else {
+      // D. EXISTING LOGIN LOGIC
+      const res = await signIn("credentials", {
+        email: form.email,
+        password: form.password,
+        redirect: false,
+      });
+
+      if (res?.error) {
+        alert("Invalid email or password!");
+      } else {
+        onClose();
+        router.push("/dashboard");
+      }
+    }
     setIsLoading(false);
-    onClose();
-    router.push("/dashboard");
   };
 
   return (
     <div className="relative">
-      {/* Close Button */}
       <button
         onClick={onClose}
         className="absolute top-4 right-4 z-10 p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors"
@@ -46,7 +92,6 @@ export function AuthModal({ isLogin, onClose, onToggleMode }: AuthModalProps) {
       </button>
 
       <div className="p-6">
-        {/* Header with Logo */}
         <div className="text-center mb-5">
           <motion.div
             initial={{ scale: 0 }}
@@ -70,15 +115,16 @@ export function AuthModal({ isLogin, onClose, onToggleMode }: AuthModalProps) {
             {isLogin ? "Welcome back" : "Create account"}
           </h2>
           <p className="text-slate-500 text-xs">
-            {isLogin 
-              ? "Sign in to continue your journey" 
-              : "Start planning your next adventure"}
+            {isLogin ? "Sign in to continue your journey" : "Start planning your next adventure"}
           </p>
         </div>
 
-        {/* Social Login - Compact */}
         <div className="flex gap-2 mb-4">
-          <button className="flex-1 flex items-center justify-center gap-2 border border-slate-200 rounded-lg py-2 hover:bg-slate-50 transition-all group">
+          <button 
+            onClick={handleGoogleLogin}
+            disabled={isLoading}
+            className="flex-1 flex items-center justify-center gap-2 border border-slate-200 rounded-lg py-2 hover:bg-slate-50 transition-all group disabled:opacity-50"
+          >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -88,7 +134,11 @@ export function AuthModal({ isLogin, onClose, onToggleMode }: AuthModalProps) {
             <span className="text-slate-600 text-xs font-medium">Google</span>
           </button>
           
-          <button className="flex-1 flex items-center justify-center gap-2 border border-slate-200 rounded-lg py-2 hover:bg-slate-50 transition-all">
+          <button 
+            onClick={handleGithubLogin}
+            disabled={isLoading}
+            className="flex-1 flex items-center justify-center gap-2 border border-slate-200 rounded-lg py-2 hover:bg-slate-50 transition-all disabled:opacity-50"
+          >
             <GitHub className="w-4 h-4 text-slate-600" />
             <span className="text-slate-600 text-xs font-medium">GitHub</span>
           </button>
@@ -103,7 +153,6 @@ export function AuthModal({ isLogin, onClose, onToggleMode }: AuthModalProps) {
           </div>
         </div>
 
-        {/* Form - Compact */}
         <form onSubmit={handleSubmit} className="space-y-3">
           {!isLogin && (
             <div>
@@ -154,22 +203,26 @@ export function AuthModal({ isLogin, onClose, onToggleMode }: AuthModalProps) {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2"
               >
-                {showPassword ? (
-                  <EyeOff className="w-3.5 h-3.5 text-slate-400" />
-                ) : (
-                  <Eye className="w-3.5 h-3.5 text-slate-400" />
-                )}
+                {showPassword ? <EyeOff className="w-3.5 h-3.5 text-slate-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
               </button>
             </div>
           </div>
 
-          {isLogin && (
-            <div className="text-right">
-              <button type="button" className="text-xs text-blue-600 hover:underline">
-                Forgot password?
-              </button>
-            </div>
-          )}
+          <div className="flex items-center justify-between mt-2">
+            <button
+              type="button"
+              onClick={() => setRememberMe(!rememberMe)}
+              className="flex items-center gap-2 group"
+            >
+              <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${rememberMe ? "bg-blue-600 border-blue-600" : "border-slate-300 group-hover:border-blue-500"}`}>
+                {rememberMe && <Check className="w-3 h-3 text-white" />}
+              </div>
+              <span className="text-xs text-slate-600 select-none cursor-pointer">Remember me</span>
+            </button>
+            {isLogin && (
+              <button type="button" className="text-xs text-blue-600 hover:underline">Forgot password?</button>
+            )}
+          </div>
 
           <button
             type="submit"
@@ -188,13 +241,9 @@ export function AuthModal({ isLogin, onClose, onToggleMode }: AuthModalProps) {
           </button>
         </form>
 
-        {/* Footer */}
         <p className="text-center text-slate-500 text-xs mt-4">
           {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <button
-            onClick={onToggleMode}
-            className="text-blue-600 font-semibold hover:underline"
-          >
+          <button onClick={onToggleMode} className="text-blue-600 font-semibold hover:underline">
             {isLogin ? "Sign up" : "Sign in"}
           </button>
         </p>

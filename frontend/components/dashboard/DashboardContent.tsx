@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Plus, MapPin, Calendar, Compass, Clock, ArrowRight,
   TrendingUp, Star, ChevronRight, Route
@@ -42,6 +43,21 @@ const stats = [
 
 export default function DashboardContent() {
   const router = useRouter();
+  
+  // Grab the session data
+  const { data: session, status } = useSession();
+  
+  // Extract the user's name (Fallback to 'Traveler' if name isn't set yet)
+  const userName = session?.user?.name || "Traveler";
+
+  // Show a clean loading state while verifying auth
+  if (status === "loading") {
+    return (
+      <div className="flex h-[50vh] items-center justify-center text-slate-500">
+        Loading your dashboard...
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
@@ -49,7 +65,7 @@ export default function DashboardContent() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-slate-900 font-extrabold text-2xl lg:text-3xl tracking-tight">
-            Good morning, Sarah
+            Welcome, {userName}
           </h1>
           <p className="text-slate-500 mt-0.5 text-sm">
             You have 2 upcoming trips. Time to explore
@@ -133,74 +149,41 @@ export default function DashboardContent() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Searches */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <h2 className="text-slate-900 mb-4 font-bold text-base">Recent Searches</h2>
-          <div className="space-y-2">
-            {recentSearches.map(s => (
-              <button key={s} onClick={() => router.push("/create-trip")} className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left">
-                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
-                  <Compass className="w-4 h-4 text-slate-500" />
-                </div>
-                <span className="text-slate-700 text-sm font-medium">{s}</span>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-400 ml-auto" />
-              </button>
-            ))}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-slate-900 font-bold">Recent Searches</h3>
+            <button className="text-sm text-blue-600 font-semibold">Clear</button>
           </div>
+          <ul className="space-y-2 text-sm text-slate-600">
+            {recentSearches.map(search => (
+              <li key={search} className="rounded-2xl bg-slate-50 px-4 py-3 flex items-center justify-between">
+                <span>{search}</span>
+                <ArrowRight className="w-4 h-4 text-slate-400" />
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* Saved Trips */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-slate-900 font-bold text-base">Saved Trips</h2>
-            <button onClick={() => router.push("/saved-trips")} className="text-blue-600 text-xs font-semibold">View all</button>
+            <h3 className="text-slate-900 font-bold">Saved Trips</h3>
+            <button onClick={() => router.push("/saved-trips")} className="text-sm text-blue-600 font-semibold">
+              View all
+            </button>
           </div>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {savedTrips.map(trip => (
-              <button key={trip.id} onClick={() => router.push(`/itinerary/${trip.id}`)} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors text-left">
-                <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
-                  <img src={trip.image} alt={trip.destination} className="w-full h-full object-cover" />
+              <div key={trip.id} className="rounded-3xl overflow-hidden bg-slate-50">
+                <img src={trip.image} alt={trip.destination} className="w-full h-28 object-cover" />
+                <div className="p-3">
+                  <h4 className="text-slate-900 font-semibold text-sm">{trip.destination}</h4>
+                  <p className="text-slate-500 text-xs">{trip.days} days · {trip.attractions} attractions</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-slate-900 truncate font-semibold text-sm">{trip.destination}</div>
-                  <div className="flex items-center gap-3 mt-0.5 text-slate-500 text-xs">
-                    <span>{trip.days} days</span>
-                    <span>•</span>
-                    <span>{trip.attractions} attractions</span>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
-              </button>
+              </div>
             ))}
           </div>
         </div>
       </div>
-
-      {/* Recommended Destinations */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-slate-900 font-bold text-lg">Recommended for You</h2>
-          <button className="flex items-center gap-1 text-blue-600 text-sm font-semibold">
-            See more <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          {recommended.map(dest => (
-            <button key={dest.name} onClick={() => router.push("/create-trip")} className="group relative rounded-2xl overflow-hidden h-48 text-left w-full">
-              <img src={dest.image} alt={dest.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <h3 className="text-white font-bold text-base">{dest.name}</h3>
-                <div className="flex items-center justify-between mt-0.5">
-                  <span className="text-slate-300 text-xs">{dest.country}</span>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                    <span className="text-white text-xs font-semibold">{dest.rating}</span>
-                  </div>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }

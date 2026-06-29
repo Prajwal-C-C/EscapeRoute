@@ -2,13 +2,19 @@
 
 import { Bell, Search } from "lucide-react";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 
 interface DashboardHeaderProps {
   userName?: string;
 }
 
-export function DashboardHeader({ userName = "Sarah" }: DashboardHeaderProps) {
+export function DashboardHeader({ userName = "Traveler" }: DashboardHeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const { data: session } = useSession();
+
+  // Determine the display name and initial dynamically from the session
+  const displayName = session?.user?.name || userName;
+  const userInitial = displayName ? displayName.charAt(0).toUpperCase() : "T";
 
   return (
     <header className="bg-white border-b border-slate-100 sticky top-0 z-30">
@@ -36,9 +42,9 @@ export function DashboardHeader({ userName = "Sarah" }: DashboardHeaderProps) {
           
           <button className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 transition-colors" aria-label="User menu">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2563eb] to-[#14b8a6] flex items-center justify-center text-white font-semibold">
-              {userName[0]}
+              {userInitial}
             </div>
-            <span className="hidden sm:inline text-sm font-medium text-slate-700">{userName}</span>
+            <span className="hidden sm:inline text-sm font-medium text-slate-700">{displayName}</span>
           </button>
         </div>
       </div>
