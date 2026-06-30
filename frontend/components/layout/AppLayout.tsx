@@ -4,9 +4,16 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
-  Route, LayoutDashboard, Map, Bookmark, Settings, Plus,
+  LayoutDashboard, Map, Bookmark, Settings, Plus,
   Search, Bell, ChevronDown, LogOut, User, Menu, X, Compass,
+  ArrowRight
 } from "lucide-react";
+
+interface SearchHistory {
+  id: string;
+  search_query: string;
+  searched_at: string;
+}
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -23,10 +30,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const { data: session } = useSession();
+
+  const isCollapsed = !sidebarOpen;
 
   const userName = session?.user?.name || "Traveler";
   const userEmail = session?.user?.email || "traveler@example.com";
+
   const userInitials = session?.user?.name
     ? session.user.name
         .split(" ")
@@ -36,10 +48,103 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         .toUpperCase()
     : "TR";
 
-  // Close sidebar on route change (mobile)
+  const handleNavClick = (path: string) => {
+    router.push(path);
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  };
+
+  // Fetch search history
+  const fetchSearchHistory = async () => {
+    try {
+      const response = await fetch('/api/search-history');
+      if (!response.ok) throw new Error('Failed to fetch search history');
+      const data = await response.json();
+      setSearchHistory(data);
+    } catch (error) {
+      console.error('Error fetching search history:', error);
+    }
+  };
+
+  // Add a new search
+  const addSearch = async (query: string) => {
+    if (!query.trim() || query.trim().length < 2) return;
+
+    try {
+      const response = await fetch('/api/search-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query.trim() }),
+      });
+
+      if (response.ok) {
+        await fetchSearchHistory();
+      }
+    } catch (error) {
+      console.error('Error adding search:', error);
+    }
+  };
+
+  // Handle search submit
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      addSearch(searchQuery);
+      router.push(`/create-trip?search=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery("");
+      setShowSearchDropdown(false);
+    }
+  };
+
+  // Handle click on recent search
+  const handleRecentSearchClick = (query: string) => {
+    addSearch(query);
+    router.push(`/create-trip?search=${encodeURIComponent(query)}`);
+    setSearchQuery("");
+    setShowSearchDropdown(false);
+  };
+
+  // Clear all searches
+  const clearSearches = async () => {
+    try {
+      const response = await fetch('/api/search-history', {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setSearchHistory([]);
+        setShowSearchDropdown(false);
+      }
+    } catch (error) {
+      console.error('Error clearing searches:', error);
+    }
+  };
+
+  // Fetch search history on mount
   useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
+    fetchSearchHistory();
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.search-dropdown') && !target.closest('.search-input')) {
+        setShowSearchDropdown(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setSidebarOpen(window.innerWidth >= 1024);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   // Close profile dropdown when clicking outside
   useEffect(() => {
@@ -54,10 +159,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Prevent body scroll when sidebar is open on mobile
   useEffect(() => {
-    if (sidebarOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      document.body.style.overflow = sidebarOpen ? 'hidden' : 'unset';
     }
     return () => {
       document.body.style.overflow = 'unset';
@@ -68,28 +171,31 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="h-screen flex bg-slate-50 overflow-hidden">
-      {/* Mobile overlay - clicks to close sidebar */}
+      {/* Mobile overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside 
+      <aside
         className={`
-          fixed lg:relative inset-y-0 left-0 z-50 w-70 bg-white border-r border-slate-100 
-          flex flex-col transition-transform duration-300 ease-in-out
+          fixed inset-y-0 left-0 z-50 bg-white border-r border-slate-100
+          flex flex-col transition-all duration-300 ease-in-out overflow-hidden
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${sidebarOpen ? 'w-72' : 'w-0 lg:w-20'}
         `}
       >
         {/* Logo */}
-        <div className="flex items-center gap-2.5 px-5 h-16 border-b border-slate-100">
-          <img src="/images/logo-removebg-preview.png" alt="EscapeRoute" className="w-8 h-8 object-contain" />
-          <span className="text-lg font-bold text-slate-900">EscapeRoute</span>
-          <button 
-            className="lg:hidden ml-auto p-1 hover:bg-slate-100 rounded-lg transition-colors" 
+        <div className={`flex items-center gap-2.5 h-16 border-b border-slate-100 ${isCollapsed ? 'px-0 lg:justify-center' : 'px-5'}`}>
+          <img src="/images/logo-removebg-preview.png" alt="EscapeRoute" className="w-8 h-8 object-contain flex-shrink-0" />
+          <span className={`text-lg font-bold text-slate-900 whitespace-nowrap ${isCollapsed ? 'lg:hidden' : 'block'}`}>
+            EscapeRoute
+          </span>
+          <button
+            className="lg:hidden ml-auto p-1 hover:bg-slate-100 rounded-lg transition-colors"
             onClick={() => setSidebarOpen(false)}
           >
             <X className="w-5 h-5 text-slate-500" />
@@ -102,21 +208,24 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             const active = isActive(path);
             return (
               <button
+                type="button"
                 key={path}
-                onClick={() => { 
-                  router.push(path); 
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left ${
+                onClick={() => handleNavClick(path)}
+                title={isCollapsed ? label : undefined}
+                className={`w-full flex items-center gap-3 py-2.5 rounded-xl transition-all ${
+                  isCollapsed ? 'lg:h-11 lg:justify-center lg:px-0' : 'px-3'
+                } ${
                   active
                     ? "bg-blue-50 text-blue-600"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
-                <span className={`text-sm ${active ? "font-semibold" : "font-medium"}`}>{label}</span>
+                <span className={`text-sm whitespace-nowrap ${active ? "font-semibold" : "font-medium"} ${isCollapsed ? 'lg:hidden' : ''}`}>
+                  {label}
+                </span>
                 {label === "New Trip" && (
-                  <span className="ml-auto bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold">
+                  <span className={`ml-auto bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold ${isCollapsed ? 'lg:hidden' : 'inline-flex'}`}>
                     NEW
                   </span>
                 )}
@@ -127,89 +236,133 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* User Section */}
         <div className="p-3 border-t border-slate-100">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">{userInitials}</span>
+          <div className={`flex items-center ${isCollapsed ? 'lg:flex-col lg:justify-center lg:gap-2' : 'gap-3'}`}>
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-semibold text-sm leading-none">{userInitials}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                <div className="text-slate-900 truncate font-semibold text-sm">
-                  {userName}
-                </div>
-                <div className="text-slate-400 truncate text-xs">
-                  {userEmail}
-                </div>
-              </div>
 
-              <LogOut
-                className="w-5 h-5 text-slate-400 cursor-pointer hover:text-red-600 transition-colors ml-3 flex-shrink-0"
-                onClick={() => signOut({ callbackUrl: "/" })}
-              />
+            <div className={`flex-1 min-w-0 ${isCollapsed ? 'lg:hidden' : 'flex flex-col'}`}>
+              <div className="text-slate-900 truncate font-semibold text-sm">{userName}</div>
+              <div className="text-slate-400 truncate text-xs">{userEmail}</div>
             </div>
-          </div>
-          {/* <div className="flex gap-2">
+
             <button
-              onClick={() => router.push("/settings")}
-              className="flex-1 rounded-xl bg-slate-50 px-3 py-2 text-slate-700 text-sm font-medium hover:bg-slate-100 transition"
-            >
-              Settings
-            </button>
-            <button
+              type="button"
               onClick={() => signOut({ callbackUrl: "/" })}
-              className="flex-1 rounded-xl bg-red-50 px-3 py-2 text-red-600 text-sm font-medium hover:bg-red-100 transition"
+              title="Sign out"
+              className={`text-slate-400 hover:text-red-600 transition-colors flex-shrink-0 ${isCollapsed ? 'lg:p-2' : 'ml-3'}`}
             >
-              Sign Out
+              <LogOut className="w-5 h-5" />
             </button>
-          </div> */}
+          </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className={`flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'lg:ml-20' : 'lg:ml-72'}`}>
         {/* Header */}
         <header className="h-16 bg-white border-b border-slate-100 flex items-center px-4 sm:px-6 gap-4 flex-shrink-0">
-          {/* Hamburger Menu Button - Mobile Only */}
           <button 
-            className="flex p-2 rounded-lg hover:bg-slate-100 transition-colors" 
-            onClick={() => setSidebarOpen(true)}
+            type="button"
+            className="relative z-[60] flex p-2 rounded-lg hover:bg-slate-100 transition-colors focus:outline-none"
+            aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+            aria-expanded={sidebarOpen}
+            onClick={() => setSidebarOpen((prev) => !prev)}
           >
-            <Menu className="w-5 h-5 text-slate-600" />
+            {sidebarOpen ? <X className="w-5 h-5 text-slate-600" /> : <Menu className="w-5 h-5 text-slate-600" />}
           </button>
 
-          {/* Search Bar - Desktop */}
-          <div className="flex-1 max-w-md hidden sm:flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-            <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search destinations, trips..."
-              className="flex-1 bg-transparent outline-none text-slate-800 text-sm"
-            />
+          {/* Search Bar with Dropdown */}
+          <div className="flex-1 max-w-md hidden sm:block relative search-dropdown">
+            <form onSubmit={handleSearch} className="relative">
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSearchDropdown(true);
+                  }}
+                  onFocus={() => setShowSearchDropdown(true)}
+                  placeholder="Search for destinations, trips, or interests..."
+                  className="flex-1 bg-transparent outline-none text-slate-800 text-sm search-input"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setShowSearchDropdown(false);
+                    }}
+                    className="text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {/* Search Dropdown */}
+            {showSearchDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-slate-200 shadow-xl z-50 max-h-80 overflow-y-auto">
+                {searchHistory.length > 0 ? (
+                  <div>
+                    <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100">
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Recent Searches</span>
+                      <button
+                        onClick={clearSearches}
+                        className="text-xs text-red-500 hover:text-red-600 font-medium"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                    {searchHistory.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleRecentSearchClick(item.search_query)}
+                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Search className="w-4 h-4 text-slate-400" />
+                          <span className="text-sm text-slate-700">{item.search_query}</span>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-slate-400" />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-4 py-8 text-center">
+                    <Search className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm text-slate-500">No recent searches</p>
+                    <p className="text-xs text-slate-400 mt-1">Search for destinations to see them here</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Right Section */}
           <div className="ml-auto flex items-center gap-3">
-            {/* New Trip Button */}
-            <button 
-              onClick={() => router.push("/create-trip")} 
+            <button
+              type="button"
+              onClick={() => router.push("/create-trip")}
               className="hidden sm:flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors text-sm font-semibold"
             >
               <Plus className="w-4 h-4" /> New Trip
             </button>
-            
-            {/* Notifications */}
-            <button className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors">
+
+            <button type="button" className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors">
               <Bell className="w-5 h-5 text-slate-600" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-orange-500" />
             </button>
-            
-            {/* Profile Dropdown */}
+
             <div className="relative profile-dropdown">
-              <button 
+              <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setProfileOpen(!profileOpen);
-                }} 
+                }}
                 className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center">
@@ -217,8 +370,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
                 <ChevronDown className="w-4 h-4 text-slate-500" />
               </button>
-              
-              {/* Dropdown Menu */}
+
               {profileOpen && (
                 <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl z-50 overflow-hidden">
                   {[
@@ -227,11 +379,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     { icon: LogOut, label: "Sign Out", action: () => signOut({ callbackUrl: "/" }) },
                   ].map(({ icon: Icon, label, action }) => (
                     <button
+                      type="button"
                       key={label}
-                      onClick={() => { 
-                        action(); 
-                        setProfileOpen(false); 
-                      }}
+                      onClick={() => { action(); setProfileOpen(false); }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 text-left transition-colors"
                     >
                       <Icon className="w-4 h-4 text-slate-500" />
@@ -244,7 +394,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Search Bar - Mobile (below header) */}
+        {/* Search Bar - Mobile */}
         <div className="sm:hidden p-4 bg-white border-b border-slate-100">
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
             <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
