@@ -198,7 +198,7 @@ model trips {
 
 model user_preferences {
   id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id               String?   @db.Uuid
+  user_id               String    @db.Uuid
   preferred_foods       String[]
   preferred_categories  String[]
   budget_level          String?   @db.VarChar(20)

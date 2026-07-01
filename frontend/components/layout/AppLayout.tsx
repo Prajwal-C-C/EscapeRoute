@@ -80,6 +80,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isActive = (path: string) => pathname === path || pathname?.startsWith(path + "/");
 
+  const handleNavClick = (path: string) => {
+    router.push(path);
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  };
+
   return (
     <div className="h-screen flex bg-slate-50 overflow-hidden">
       {/* Mobile overlay */}

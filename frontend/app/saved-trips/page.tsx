@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  AlertTriangle, MapPin, Calendar, Plane, Train, Car, Bike,
+  AlertTriangle, MapPin, Calendar, Plane, Train, Car, Bike, Bus,
   Trash2, Sparkles, ChevronRight, Compass
 } from 'lucide-react';
 
@@ -32,8 +32,34 @@ const TRAVEL_MODE_ICONS: Record<string, React.ReactNode> = {
   flight: <Plane className="w-4 h-4" />,
   train: <Train className="w-4 h-4" />,
   car: <Car className="w-4 h-4" />,
+  bike: <Bike className="w-4 h-4" />,
   cycle: <Bike className="w-4 h-4" />,
+  bus: <Bus className="w-4 h-4" />,
 };
+
+const TRAVEL_MODE_LABELS: Record<string, string> = {
+  flight: 'Flight',
+  train: 'Train',
+  car: 'Car',
+  bike: 'Bike',
+  cycle: 'Bike',
+  bus: 'Bus',
+};
+
+function getTravelModeDisplay(mode: string | null) {
+  const normalized = (mode || '').trim().toLowerCase();
+
+  if (!normalized) {
+    return { label: 'Not selected', icon: null };
+  }
+
+  const key = normalized === 'cycle' ? 'bike' : normalized;
+
+  return {
+    label: TRAVEL_MODE_LABELS[key] || normalized.replace(/-/g, ' '),
+    icon: TRAVEL_MODE_ICONS[key] || null,
+  };
+}
 
 export default function SavedTripsPage() {
   const router = useRouter();
@@ -219,14 +245,17 @@ export default function SavedTripsPage() {
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Travel Mode</p>
                       <div className="flex items-center gap-2">
-                        {trip.travel_mode && TRAVEL_MODE_ICONS[trip.travel_mode] ? (
-                          <>
-                            {TRAVEL_MODE_ICONS[trip.travel_mode]}
-                            <span className="text-sm text-slate-700 capitalize">{trip.travel_mode}</span>
-                          </>
-                        ) : (
-                          <span className="text-sm text-slate-400">Not selected</span>
-                        )}
+                        {(() => {
+                          const travelMode = getTravelModeDisplay(trip.travel_mode);
+                          return travelMode.icon ? (
+                            <>
+                              {travelMode.icon}
+                              <span className="text-sm text-slate-700">{travelMode.label}</span>
+                            </>
+                          ) : (
+                            <span className="text-sm text-slate-400">{travelMode.label}</span>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>

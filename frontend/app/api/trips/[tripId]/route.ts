@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from '@prisma/adapter-pg';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/auth";
 
-// Initialize Prisma safely
 let prisma: PrismaClient;
 try {
   const adapter = new PrismaPg({
@@ -14,65 +15,71 @@ try {
 }
 
 // ==========================================
-// GET: Fetch a single trip by ID (For View Details)
-// ==========================================
-// ==========================================
-// GET: Fetch a single trip by ID (For View Details)
+// GET: Fetch a single trip securely
 // ==========================================
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ tripId: string }> | { tripId: string } }
+  context: { params: Promise<{ tripId: string }> }
 ) {
   try {
-    // 1. Await params (Required for newer Next.js versions)
+    const session = await getServerSession(authOptions);
+    // @ts-ignore
+    const userId = session?.user?.id;
+
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const resolvedParams = await context.params;
     const tripId = resolvedParams.tripId;
 
-    const trip = await prisma.trips.findUnique({
+    // Use findFirst because we are querying by multiple fields safely
+    const trip = await prisma.trips.findFirst({
       where: {
         id: tripId,
+        user_id: userId, // Ownership security check
       },
     });
 
     if (!trip) {
-      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
+      return NextResponse.json({ error: "Trip not found or unauthorized" }, { status: 404 });
     }
 
     return NextResponse.json(trip);
   } catch (error) {
     console.error("❌ Error fetching specific trip:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch trip details" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch trip details" }, { status: 500 });
   }
 }
+
 // ==========================================
-// DELETE: Delete a single trip by ID
-// ==========================================
-// ==========================================
-// DELETE: Delete a single trip by ID
+// DELETE: Delete a single trip securely
 // ==========================================
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ tripId: string }> | { tripId: string } } 
+  context: { params: Promise<{ tripId: string }> }
 ) {
   try {
-    // 1. Await params (Required for newer Next.js versions)
+    const session = await getServerSession(authOptions);
+    // @ts-ignore
+    const userId = session?.user?.id;
+
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const resolvedParams = await context.params;
     const tripId = resolvedParams.tripId;
 
-    // 2. Verify the trip exists
-    const existingTrip = await prisma.trips.findUnique({
-      where: { id: tripId },
+    // 1. Verify the trip exists and belongs to the user
+    const existingTrip = await prisma.trips.findFirst({
+      where: { 
+        id: tripId,
+        user_id: userId // Ownership security check
+      },
     });
 
     if (!existingTrip) {
-      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
+      return NextResponse.json({ error: "Trip not found or unauthorized" }, { status: 404 });
     }
 
-    // 3. FIX: Delete related child records FIRST
-    // This prevents the PostgreSQL Foreign Key Constraint violation
+    // 2. Delete related child records first to prevent foreign key errors
     await prisma.itineraries.deleteMany({
       where: { trip_id: tripId },
     });
@@ -81,22 +88,17 @@ export async function DELETE(
       where: { trip_id: tripId },
     });
 
-    // 4. Finally, safely delete the parent trip
+    // 3. Finally, safely delete the parent trip
     await prisma.trips.delete({
       where: { id: tripId },
     });
 
-    console.log(`🗑️ Deleted trip ID: ${tripId}`);
     return NextResponse.json(
       { success: true, message: "Trip deleted successfully" }, 
       { status: 200 }
     );
-
   } catch (error) {
     console.error("❌ Error deleting trip:", error);
-    return NextResponse.json(
-      { error: "Failed to delete trip" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete trip" }, { status: 500 });
   }
 }

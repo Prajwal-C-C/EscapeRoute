@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -561,6 +561,7 @@ function StyleStep({
 }) {
   const [transport, setTransport] = useState(initialTransport || "flight");
   const [recommendedMode, setRecommendedMode] = useState("flight");
+  const [hasUserSelectedTransport, setHasUserSelectedTransport] = useState(Boolean(initialTransport));
   const [travelTimes, setTravelTimes] = useState<Record<string, string>>({});
   const [travelCosts, setTravelCosts] = useState<Record<string, {min: number, max: number}>>({});
   const [distance, setDistance] = useState<number | null>(null);
@@ -603,18 +604,24 @@ function StyleStep({
       // Smart recommendation based on distance
       const recommended = dist < 50 ? "bike" : dist < 200 ? "car" : dist < 600 ? "train" : "flight";
       setRecommendedMode(recommended);
-      
-      if (!initialTransport) {
+
+      if (!hasUserSelectedTransport && !initialTransport) {
         setTransport(recommended);
       }
     }
-  }, [origin, destination, initialTransport]);
+  }, [origin, destination, initialTransport, hasUserSelectedTransport]);
 
   useEffect(() => {
     if (initialTransport) {
       setTransport(initialTransport);
+      setHasUserSelectedTransport(true);
     }
   }, [initialTransport]);
+
+  const handleTransportSelect = (mode: string) => {
+    setHasUserSelectedTransport(true);
+    setTransport(mode);
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4 }} className="space-y-6">
@@ -637,7 +644,7 @@ function StyleStep({
             <button
               key={opt.id}
               type="button"
-              onClick={(event) => { event.preventDefault(); setTransport(opt.id); }}
+              onClick={(event) => { event.preventDefault(); handleTransportSelect(opt.id); }}
               className={`relative p-4 rounded-xl text-center transition-all border-2
                 ${active ? "border-[#27788e] bg-[#27788e]/5 shadow-md" : "border-slate-100 hover:border-slate-200"}`}
             >
@@ -756,7 +763,7 @@ function GeneratingScreen() {
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function CreateTripPage() {
+function CreateTripPageContent() {
   const [step, setStep] = useState<Step>("trip-type");
   const [tripType, setTripType] = useState<TripType>("one-way");
   const [fromLocation, setFromLocation] = useState<Location | null>(null);
@@ -1015,5 +1022,13 @@ export default function CreateTripPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CreateTripPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f8fafb] p-4 md:p-6"><div className="max-w-3xl mx-auto text-center py-20 text-slate-500">Loading trip builder...</div></div>}>
+      <CreateTripPageContent />
+    </Suspense>
   );
 }
