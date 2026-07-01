@@ -6,7 +6,6 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
 
 export const dynamic = 'force-dynamic';
 
-// Initialize Prisma
 let prisma: PrismaClient;
 
 try {
@@ -50,7 +49,16 @@ async function geocodeLocation(locationName: string): Promise<{ lat: number | nu
 // ==========================================
 export async function GET() {
   try {
-    const allTrips = await prisma.trips.findMany({
+    const session = await getServerSession(authOptions);
+    // @ts-ignore
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userTrips = await prisma.trips.findMany({
+      where: { user_id: userId }, // Filter securely by user_id
       orderBy: { created_at: 'desc' }
     });
     
@@ -97,7 +105,6 @@ export async function POST(request: NextRequest) {
       orgLng = result.lng;
     }
 
-    // Prepare data for database
     const tripData: any = {
       user_id: userId, // Link the trip to the active user
       destination_name: destination_name || "Unknown Destination",
@@ -122,86 +129,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("❌ POST Database error:", error);
     let errorMessage = "Failed to create trip";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-      
-      // Check for specific Prisma errors
-      if (errorMessage.includes("Unknown argument")) {
-        errorMessage = "Database schema mismatch. Please run 'npx prisma migrate dev --name add_origin_coordinates'";
-      }
-    }
-    
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
+    if (error instanceof Error) errorMessage = error.message;
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
-
-// ==========================================
-// DELETE: Delete a trip
-// ==========================================
-<<<<<<<<< Temporary merge branch 1
-// export async function DELETE(request: NextRequest) {
-//   try {
-//     const { searchParams } = new URL(request.url);
-//     const id = searchParams.get('id');
-
-//     if (!id) {
-//       return NextResponse.json(
-//         { error: "Trip ID is required" },
-//         { status: 400 }
-//       );
-//     }
-
-//     await prisma.trips.delete({
-//       where: { id },
-//     });
-
-//     return NextResponse.json({ 
-//       success: true, 
-//       message: "Trip deleted successfully" 
-//     });
-
-//   } catch (error) {
-//     console.error("❌ DELETE Database error:", error);
-//     return NextResponse.json(
-//       { error: "Failed to delete trip" },
-//       { status: 500 }
-//     );
-//   }
-// }
-// Add this to your existing DELETE handler or update it
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params;
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "Trip ID is required" },
-        { status: 400 }
-      );
-    }
-
-    await prisma.trips.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ 
-      success: true, 
-      message: "Trip deleted successfully" 
-    });
-
-  } catch (error) {
-    console.error("❌ DELETE Database error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete trip" },
-      { status: 500 }
-    );
-  }
-}
-=========
->>>>>>>>> Temporary merge branch 2

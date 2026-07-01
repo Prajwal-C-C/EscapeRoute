@@ -7,15 +7,32 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
 export const dynamic = 'force-dynamic';
 
 // Initialize Prisma
-const pgAdapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL as string
-});
-const prisma = new PrismaClient({ adapter: pgAdapter });
+let prisma: PrismaClient;
+
+try {
+  const adapter = new PrismaPg({
+    connectionString: process.env.DATABASE_URL as string
+  });
+  prisma = new PrismaClient({ adapter });
+} catch (error) {
+  console.error("❌ Failed to initialize Prisma with adapter:", error);
+  prisma = new PrismaClient();
+}
 
 export async function GET() {
   try {
-    // Get all trips
-    const allTrips = await prisma.trips.findMany();
+    const session = await getServerSession(authOptions);
+    // @ts-ignore
+    const userId = session?.user?.id;
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userTrips = await prisma.trips.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+    });
 
     // Calculate stats
     const totalTrips = userTrips.length;
@@ -24,7 +41,7 @@ export async function GET() {
     const countries = new Set<string>();
     userTrips.forEach(trip => {
       if (trip.destination_name) {
-        // Extract country from destination name
+        // Extract country from destination name (simple approach)
         const parts = trip.destination_name?.split(',') || [];
         const country = parts.length > 1 ? parts[parts.length - 1].trim() : trip.destination_name;
         if (country) countries.add(country);
@@ -41,7 +58,7 @@ export async function GET() {
     
     // Get total attractions (places) - this would need a separate query
     // For now, we'll use a placeholder or calculate from itineraries
-    const totalAttractions = allTrips.reduce((acc, trip) => {
+    const totalAttractions = userTrips.reduce((acc) => {
       // This would need to be calculated from itineraries
       // For now, we'll use a random number or calculate from saved trips
       return acc + 15; // Placeholder
@@ -56,7 +73,7 @@ export async function GET() {
   } catch (error) {
     console.error("❌ Error fetching dashboard stats:", error);
     return NextResponse.json(
-      { error: "Failed to fetch stats", details: error instanceof Error ? error.message : "Unknown error" },
+      { error: "Failed to fetch stats" },
       { status: 500 }
     );
   }
