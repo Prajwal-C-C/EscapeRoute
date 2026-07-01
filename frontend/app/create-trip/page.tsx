@@ -845,64 +845,63 @@ export default function CreateTripPage() {
     }
   };
 
-  const handleGenerate = async () => {
-    setIsGenerating(true);
-    try {
-      const tripData = {
-        trip_type: tripType,
-        origin_name: fromLocation?.name || null,
-        origin_lat: fromLocation?.lat || null,
-        origin_lng: fromLocation?.lng || null,
-        destination_name: toLocation?.name || "Unknown",
-        destination_lat: toLocation?.lat || null,
-        destination_lng: toLocation?.lng || null,
-        start_date: details?.startDate || null,
-        end_date: details?.endDate || null,
-        trip_days: details?.duration || 1,
-        travel_mode: style?.transport || "flight",
-        interests: [],
-        status: "planning",
-      };
+const handleGenerate = async () => {
+  setIsGenerating(true);
+  try {
+    const tripData = {
+      trip_type: tripType,
+      origin_name: fromLocation?.name || null,
+      origin_lat: fromLocation?.lat || null,
+      origin_lng: fromLocation?.lng || null,
+      destination_name: toLocation?.name || "Unknown",
+      destination_lat: toLocation?.lat || null,
+      destination_lng: toLocation?.lng || null,
+      start_date: details?.startDate || null,
+      end_date: details?.endDate || null,
+      trip_days: details?.duration || 1,
+      travel_mode: style?.transport || "flight",
+      interests: [],
+      status: "planning",
+    };
 
-      const response = await fetch('/api/trips', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(tripData),
-      });
+    console.log("🚀 Sending to API:", tripData);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save trip");
-      }
-      
-      const data = await response.json();
-      
-      // ─── CLEAR ALL SESSION STORAGE DATA ───
-      // Set a flag to clear data on next load
-      sessionStorage.setItem('clearTripData', 'true');
-      
-      // Also clear current session data
-      const keysToRemove = ['fromLocation', 'toLocation', 'details', 'style', 'tripType'];
-      keysToRemove.forEach(key => sessionStorage.removeItem(key));
-      
-      // Reset state
-      setFromLocation(null);
-      setToLocation(null);
-      setDetails(null);
-      setStyle(null);
-      setTripType("one-way");
-      setStep("trip-type");
-      
-      if (data.trip && data.trip.id) {
-        router.push(`/itinerary/${data.trip.id}`);
-      }
-    } catch (error) {
-      console.error("❌ Error generating trip:", error);
-      alert(error instanceof Error ? error.message : "Failed to generate trip");
-      setIsGenerating(false);
+    const response = await fetch('/api/trips', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tripData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to save trip");
     }
-  };
-
+    
+    const data = await response.json();
+    console.log("✅ Trip saved:", data);
+    
+    // Clear session data
+    sessionStorage.setItem('clearTripData', 'true');
+    const keysToRemove = ['fromLocation', 'toLocation', 'details', 'style', 'tripType'];
+    keysToRemove.forEach(key => sessionStorage.removeItem(key));
+    
+    // Reset state
+    setFromLocation(null);
+    setToLocation(null);
+    setDetails(null);
+    setStyle(null);
+    setTripType("one-way");
+    setStep("trip-type");
+    
+    if (data.trip && data.trip.id) {
+      router.push(`/itinerary/${data.trip.id}`);
+    }
+  } catch (error) {
+    console.error("❌ Error generating trip:", error);
+    alert(error instanceof Error ? error.message : "Failed to generate trip");
+    setIsGenerating(false);
+  }
+};
   if (isGenerating) {
     return (
       <div className="min-h-screen bg-[#f8fafb] flex items-center justify-center p-6">

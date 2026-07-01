@@ -376,7 +376,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               {profileOpen && (
                 <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl z-50 overflow-hidden">
                   {[
-                    { icon: User, label: "Profile", action: () => router.push("/settings") },
+                    { icon: User, label: "Profile", action: () => router.push("/profile") },
                     { icon: Settings, label: "Settings", action: () => router.push("/settings") },
                     { icon: LogOut, label: "Sign Out", action: () => signOut({ callbackUrl: "/" }) },
                   ].map(({ icon: Icon, label, action }) => (

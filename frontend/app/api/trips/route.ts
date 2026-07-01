@@ -5,17 +5,10 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 // Initialize Prisma
-let prisma: PrismaClient;
-
-try {
-  const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL as string
-  });
-  prisma = new PrismaClient({ adapter });
-} catch (error) {
-  console.error("❌ Failed to initialize Prisma with adapter:", error);
-  prisma = new PrismaClient();
-}
+const pgAdapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL as string
+});
+const prisma = new PrismaClient({ adapter: pgAdapter });
 
 // ==========================================
 // Helper: Geocode a location using Geoapify
@@ -69,6 +62,24 @@ async function geocodeLocation(locationName: string): Promise<{ lat: number | nu
 export async function GET() {
   try {
     const allTrips = await prisma.trips.findMany({
+      select: {
+        id: true,
+        destination_name: true,
+        destination_lat: true,
+        destination_lng: true,
+        origin_name: true,
+        origin_lat: true,
+        origin_lng: true,
+        start_date: true,
+        end_date: true,
+        trip_days: true,
+        travel_mode: true,
+        status: true,
+        created_at: true,
+        interests: true,
+        trip_type: true,
+        user_id: true,
+      },
       orderBy: { created_at: 'desc' }
     });
     return NextResponse.json(allTrips);
@@ -126,7 +137,7 @@ export async function POST(request: NextRequest) {
       orgLng = result.lng;
     }
 
-    // Prepare data for database
+    // Prepare data for database - only fields that exist in schema
     const tripData: any = {
       destination_name: destination_name || "Unknown Destination",
       trip_days: trip_days || 1,
@@ -183,11 +194,6 @@ export async function POST(request: NextRequest) {
     let errorMessage = "Failed to create trip";
     if (error instanceof Error) {
       errorMessage = error.message;
-      
-      // Check for specific Prisma errors
-      if (errorMessage.includes("Unknown argument")) {
-        errorMessage = "Database schema mismatch. Please run 'npx prisma migrate dev --name add_origin_coordinates'";
-      }
     }
     
     return NextResponse.json(

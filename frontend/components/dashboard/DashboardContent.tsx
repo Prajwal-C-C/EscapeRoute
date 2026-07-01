@@ -17,11 +17,9 @@ interface Trip {
   travel_mode: string | null;
   status: string | null;
   created_at: string | null;
-  budget: string | null;
-  pace: string | null;
-  wake_up: string | null;
   interests: string[];
   origin_name: string | null;
+  trip_type: string | null;
 }
 
 interface SearchHistory {
@@ -73,8 +71,13 @@ export default function DashboardContent() {
         setTrips(tripsData);
 
         // Fetch stats
+        // In the fetchData function, update the stats fetch
         const statsResponse = await fetch('/api/dashboard/stats');
-        if (!statsResponse.ok) throw new Error('Failed to fetch stats');
+        if (!statsResponse.ok) {
+          const errorData = await statsResponse.json();
+          console.error('Stats error:', errorData);
+          throw new Error('Failed to fetch stats');
+        }
         const statsData = await statsResponse.json();
         setStats(statsData);
 

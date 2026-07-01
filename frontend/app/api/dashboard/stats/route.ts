@@ -5,22 +5,28 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 // Initialize Prisma
-let prisma: PrismaClient;
-
-try {
-  const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL as string
-  });
-  prisma = new PrismaClient({ adapter });
-} catch (error) {
-  console.error("❌ Failed to initialize Prisma with adapter:", error);
-  prisma = new PrismaClient();
-}
+const pgAdapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL as string
+});
+const prisma = new PrismaClient({ adapter: pgAdapter });
 
 export async function GET() {
   try {
-    // Get all trips
-    const allTrips = await prisma.trips.findMany();
+    // Get all trips - select only fields that exist in your schema
+    const allTrips = await prisma.trips.findMany({
+      select: {
+        id: true,
+        destination_name: true,
+        trip_days: true,
+        start_date: true,
+        end_date: true,
+        status: true,
+        created_at: true,
+        interests: true,
+        travel_mode: true,
+        // Only select fields that exist in your schema
+      }
+    });
 
     // Calculate stats
     const totalTrips = allTrips.length;
@@ -29,7 +35,7 @@ export async function GET() {
     const countries = new Set<string>();
     allTrips.forEach(trip => {
       if (trip.destination_name) {
-        // Extract country from destination name (simple approach)
+        // Extract country from destination name
         const parts = trip.destination_name?.split(',') || [];
         const country = parts.length > 1 ? parts[parts.length - 1].trim() : trip.destination_name;
         if (country) countries.add(country);
@@ -44,12 +50,11 @@ export async function GET() {
       }
     });
     
-    // Get total attractions (places) - this would need a separate query
-    // For now, we'll use a placeholder or calculate from itineraries
+    // Get total attractions (places) - placeholder for now
+    // You can calculate this from itineraries if you have that data
     const totalAttractions = allTrips.reduce((acc, trip) => {
-      // This would need to be calculated from itineraries
-      // For now, we'll use a random number or calculate from saved trips
-      return acc + 15; // Placeholder
+      // Placeholder - replace with actual calculation
+      return acc + 15;
     }, 0);
 
     return NextResponse.json({
@@ -61,7 +66,7 @@ export async function GET() {
   } catch (error) {
     console.error("❌ Error fetching dashboard stats:", error);
     return NextResponse.json(
-      { error: "Failed to fetch stats" },
+      { error: "Failed to fetch stats", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }

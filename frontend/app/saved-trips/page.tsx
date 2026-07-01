@@ -12,6 +12,9 @@ interface Trip {
   destination_name: string;
   destination_lat: number | null;
   destination_lng: number | null;
+  origin_name: string | null;
+  origin_lat: number | null;
+  origin_lng: number | null;
   start_date: string | null;
   end_date: string | null;
   trip_days: number | null;
@@ -19,6 +22,7 @@ interface Trip {
   status: string | null;
   created_at: string | null;
   interests: string[];
+  trip_type: string | null;
 }
 
 const STATUS_COLORS = {
