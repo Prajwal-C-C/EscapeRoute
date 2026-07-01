@@ -200,3 +200,32 @@ export async function POST(request: NextRequest) {
 // ==========================================
 // DELETE: Delete a trip
 // ==========================================
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Trip ID is required" },
+        { status: 400 }
+      );
+    }
+
+    await prisma.trips.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      message: "Trip deleted successfully" 
+    });
+
+  } catch (error) {
+    console.error("❌ DELETE Database error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete trip" },
+      { status: 500 }
+    );
+  }
+}

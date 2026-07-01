@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Compass, ArrowRight, ArrowLeft, Sparkles, MapPin, Calendar,
@@ -121,6 +121,7 @@ function LocationSearch({
   onSelect,
   icon,
   error,
+  initialQuery,
 }: {
   label: string;
   placeholder: string;
@@ -129,6 +130,7 @@ function LocationSearch({
   onSelect: (location: Location) => void;
   icon: React.ReactNode;
   error?: string;
+  initialQuery?: string;
 }) {
   const API_KEY = process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY;
 
@@ -136,9 +138,23 @@ function LocationSearch({
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [hasAutoSearched, setHasAutoSearched] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Auto-search if initialQuery is provided
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim().length >= 2 && !hasAutoSearched) {
+      setHasAutoSearched(true);
+      // Trigger the search
+      searchLocations(initialQuery);
+      // Set the value
+      onChange(initialQuery);
+      // Show suggestions
+      setShowSuggestions(true);
+    }
+  }, [initialQuery]);
 
   const searchLocations = async (query: string) => {
     if (query.trim().length < 2) {
@@ -186,7 +202,9 @@ function LocationSearch({
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      searchLocations(value);
+      if (value && !initialQuery) {
+        searchLocations(value);
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [value]);
@@ -319,17 +337,33 @@ function TripTypeStep({ onContinue }: { onContinue: (type: TripType) => void }) 
 }
 
 // ─── Step 2: Destination ──────────────────────────────────────────────────────
-function DestinationStep({ onContinue, tripType, initialFrom, initialTo }: { 
+function DestinationStep({ 
+  onContinue, 
+  tripType, 
+  initialFrom, 
+  initialTo,
+  searchQuery 
+}: { 
   onContinue: (data: { from: Location | null; to: Location | null }) => void; 
   tripType: TripType;
   initialFrom?: Location | null;
   initialTo?: Location | null;
+  searchQuery?: string | null;
 }) {
   const [fromLocation, setFromLocation] = useState<Location | null>(initialFrom || null);
   const [toLocation, setToLocation] = useState<Location | null>(initialTo || null);
   const [fromQuery, setFromQuery] = useState(initialFrom?.name || "");
   const [toQuery, setToQuery] = useState(initialTo?.name || "");
   const [errors, setErrors] = useState<{ from?: string; to?: string }>({});
+
+  // Auto-fill destination with search query if provided
+  useEffect(() => {
+    if (searchQuery && searchQuery.trim().length >= 2 && !toQuery) {
+      setToQuery(searchQuery);
+      // Trigger search for the query
+      // The LocationSearch component will handle the search
+    }
+  }, [searchQuery]);
 
   const validate = () => {
     const newErrors: { from?: string; to?: string } = {};
@@ -377,6 +411,7 @@ function DestinationStep({ onContinue, tripType, initialFrom, initialTo }: {
               onSelect={(loc) => { setToLocation(loc); setToQuery(loc.name); }} 
               icon={<MapPin className="w-4 h-4" />}
               error={errors.to}
+              initialQuery={searchQuery || undefined}
             />
           </div>
         </div>
@@ -731,6 +766,8 @@ export default function CreateTripPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get('search');
 
   // ─── Load saved data from sessionStorage only on first load ──────────────────
   useEffect(() => {
@@ -760,6 +797,14 @@ export default function CreateTripPage() {
       setIsFirstLoad(false);
     }
   }, [isFirstLoad]);
+
+  // ─── Auto-advance to destination step if search query exists ──────────────
+  useEffect(() => {
+    if (searchQuery && searchQuery.trim().length >= 2 && step === "trip-type") {
+      // If there's a search query, auto-advance to destination step
+      setStep("destination");
+    }
+  }, [searchQuery]);
 
   // ─── Save data to sessionStorage ──────────────────────────────────────────
   useEffect(() => {
@@ -901,6 +946,7 @@ export default function CreateTripPage() {
                 tripType={tripType} 
                 initialFrom={fromLocation}
                 initialTo={toLocation}
+                searchQuery={searchQuery}
                 onContinue={(d) => { 
                   setFromLocation(d.from); 
                   setToLocation(d.to); 
