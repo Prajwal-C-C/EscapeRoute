@@ -48,7 +48,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         .toUpperCase()
     : "TR";
 
-  // Handle navigation click
   const handleNavClick = (path: string) => {
     router.push(path);
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -56,6 +55,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
+<<<<<<<<< Temporary merge branch 1
   // Fetch search history
   const fetchSearchHistory = async () => {
     try {
@@ -139,7 +139,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  // Close sidebar on route change (mobile)
+  useEffect(() => {
+=========
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setSidebarOpen(window.innerWidth >= 1024);
@@ -170,6 +171,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [sidebarOpen]);
 
   const isActive = (path: string) => pathname === path || pathname?.startsWith(path + "/");
+
+  const handleNavClick = (path: string) => {
+    router.push(path);
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  };
 
   return (
     <div className="h-screen flex bg-slate-50 overflow-hidden">
@@ -274,8 +282,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {sidebarOpen ? <X className="w-5 h-5 text-slate-600" /> : <Menu className="w-5 h-5 text-slate-600" />}
           </button>
 
-          {/* Search Bar with Dropdown - Desktop */}
-          <div className="flex-1 max-w-md hidden sm:block search-dropdown">
+<<<<<<<<< Temporary merge branch 1
+          {/* Search Bar with Dropdown */}
+          <div className="flex-1 max-w-md hidden sm:block relative search-dropdown">
             <form onSubmit={handleSearch} className="relative">
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
                 <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
@@ -342,6 +351,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 )}
               </div>
             )}
+=========
+          <div className="flex-1 max-w-md hidden sm:flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+            <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search destinations, trips..."
+              className="flex-1 bg-transparent outline-none text-slate-800 text-sm"
+            />
+>>>>>>>>> Temporary merge branch 2
           </div>
 
           <div className="ml-auto flex items-center gap-3">

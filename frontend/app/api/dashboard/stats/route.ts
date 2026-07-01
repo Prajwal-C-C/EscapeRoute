@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,28 +14,15 @@ const prisma = new PrismaClient({ adapter: pgAdapter });
 
 export async function GET() {
   try {
-    // Get all trips - select only fields that exist in your schema
-    const allTrips = await prisma.trips.findMany({
-      select: {
-        id: true,
-        destination_name: true,
-        trip_days: true,
-        start_date: true,
-        end_date: true,
-        status: true,
-        created_at: true,
-        interests: true,
-        travel_mode: true,
-        // Only select fields that exist in your schema
-      }
-    });
+    // Get all trips
+    const allTrips = await prisma.trips.findMany();
 
     // Calculate stats
-    const totalTrips = allTrips.length;
+    const totalTrips = userTrips.length;
     
     // Get unique countries visited from destination_name
     const countries = new Set<string>();
-    allTrips.forEach(trip => {
+    userTrips.forEach(trip => {
       if (trip.destination_name) {
         // Extract country from destination name
         const parts = trip.destination_name?.split(',') || [];
@@ -44,17 +33,18 @@ export async function GET() {
     
     // Calculate total days traveled
     let totalDays = 0;
-    allTrips.forEach(trip => {
+    userTrips.forEach(trip => {
       if (trip.trip_days) {
         totalDays += trip.trip_days;
       }
     });
     
-    // Get total attractions (places) - placeholder for now
-    // You can calculate this from itineraries if you have that data
+    // Get total attractions (places) - this would need a separate query
+    // For now, we'll use a placeholder or calculate from itineraries
     const totalAttractions = allTrips.reduce((acc, trip) => {
-      // Placeholder - replace with actual calculation
-      return acc + 15;
+      // This would need to be calculated from itineraries
+      // For now, we'll use a random number or calculate from saved trips
+      return acc + 15; // Placeholder
     }, 0);
 
     return NextResponse.json({
