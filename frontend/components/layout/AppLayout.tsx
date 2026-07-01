@@ -48,6 +48,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         .toUpperCase()
     : "TR";
 
+  // Handle navigation click
   const handleNavClick = (path: string) => {
     router.push(path);
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
@@ -138,6 +139,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  // Close sidebar on route change (mobile)
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setSidebarOpen(window.innerWidth >= 1024);
@@ -272,8 +274,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {sidebarOpen ? <X className="w-5 h-5 text-slate-600" /> : <Menu className="w-5 h-5 text-slate-600" />}
           </button>
 
-          {/* Search Bar with Dropdown */}
-          <div className="flex-1 max-w-md hidden sm:block relative search-dropdown">
+          {/* Search Bar with Dropdown - Desktop */}
+          <div className="flex-1 max-w-md hidden sm:block search-dropdown">
             <form onSubmit={handleSearch} className="relative">
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
                 <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
@@ -396,15 +398,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Search Bar - Mobile */}
         <div className="sm:hidden p-4 bg-white border-b border-slate-100">
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+          <form onSubmit={handleSearch} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
             <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
             <input
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSearchDropdown(true);
+              }}
               placeholder="Search destinations, trips..."
-              className="flex-1 bg-transparent outline-none text-slate-800 text-sm"
+              className="flex-1 bg-transparent outline-none text-slate-800 text-sm search-input"
             />
-          </div>
+          </form>
         </div>
 
         {/* Page Content */}

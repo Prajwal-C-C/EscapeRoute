@@ -601,17 +601,20 @@ function StyleStep({
       setTravelCosts(costs);
 
       // Smart recommendation based on distance
-      if (dist < 50) { setRecommendedMode("bike"); }
-      else if (dist < 200) { setRecommendedMode("car"); }
-      else if (dist < 600) { setRecommendedMode("train"); }
-      else { setRecommendedMode("flight"); }
+      const recommended = dist < 50 ? "bike" : dist < 200 ? "car" : dist < 600 ? "train" : "flight";
+      setRecommendedMode(recommended);
       
-      // Only set transport if not already set by user
       if (!initialTransport) {
-        setTransport(recommendedMode);
+        setTransport(recommended);
       }
     }
-  }, [origin, destination]);
+  }, [origin, destination, initialTransport]);
+
+  useEffect(() => {
+    if (initialTransport) {
+      setTransport(initialTransport);
+    }
+  }, [initialTransport]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4 }} className="space-y-6">
@@ -633,7 +636,8 @@ function StyleStep({
           return (
             <button
               key={opt.id}
-              onClick={() => setTransport(opt.id)}
+              type="button"
+              onClick={(event) => { event.preventDefault(); setTransport(opt.id); }}
               className={`relative p-4 rounded-xl text-center transition-all border-2
                 ${active ? "border-[#27788e] bg-[#27788e]/5 shadow-md" : "border-slate-100 hover:border-slate-200"}`}
             >
@@ -856,11 +860,8 @@ export default function CreateTripPage() {
         end_date: details?.endDate || null,
         trip_days: details?.duration || 1,
         travel_mode: style?.transport || "flight",
-        pace: "balanced",
-        wake_up: "mid",
         interests: [],
         status: "planning",
-        budget: "comfort",
       };
 
       const response = await fetch('/api/trips', {

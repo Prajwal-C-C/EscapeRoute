@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  MapPin, Calendar, Clock, Plane, Train, Car, Bike,
-  TrendingUp, Star, Heart, Eye, Trash2, Sparkles,
-  ChevronRight, Users, DollarSign, Sun, Moon, Coffee, Compass
+  AlertTriangle, MapPin, Calendar, Plane, Train, Car, Bike,
+  Trash2, Sparkles, ChevronRight, Compass
 } from 'lucide-react';
 
 interface Trip {
@@ -19,9 +18,6 @@ interface Trip {
   travel_mode: string | null;
   status: string | null;
   created_at: string | null;
-  budget: string | null;
-  pace: string | null;
-  wake_up: string | null;
   interests: string[];
 }
 
@@ -39,36 +35,13 @@ const TRAVEL_MODE_ICONS: Record<string, React.ReactNode> = {
   cycle: <Bike className="w-4 h-4" />,
 };
 
-const BUDGET_LABELS: Record<string, string> = {
-  budget: 'Budget',
-  comfort: 'Comfort',
-  premium: 'Premium',
-  luxury: 'Luxury',
-};
-
-const PACE_LABELS: Record<string, string> = {
-  relaxed: '😌 Relaxed',
-  balanced: '⚖️ Balanced',
-  packed: '⚡ Go-getter',
-};
-
-const WAKE_LABELS: Record<string, string> = {
-  early: '🌅 Early Bird',
-  mid: '☀️ Mid-Morning',
-  late: '🌙 Night Owl',
-};
-
 export default function SavedTripsPage() {
   const router = useRouter();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchTrips();
-  }, []);
-
-  const fetchTrips = async () => {
+  const fetchTrips = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/trips');
@@ -86,7 +59,15 @@ export default function SavedTripsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchTrips();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [fetchTrips]);
 
   const handleDeleteTrip = async (tripId: string) => {
     if (!confirm('Are you sure you want to delete this trip?')) return;
@@ -127,7 +108,7 @@ export default function SavedTripsPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 flex items-center justify-center p-6">
         <div className="text-center">
           <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">⚠️</span>
+            <AlertTriangle className="w-8 h-8 text-red-500" />
           </div>
           <h3 className="text-lg font-semibold text-slate-800">Something went wrong</h3>
           <p className="text-slate-500 mt-2">{error}</p>
@@ -197,7 +178,7 @@ export default function SavedTripsPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <h2 className="text-xl font-bold text-[#1e355c] truncate flex items-center gap-2">
-                        <span className="text-2xl">📍</span>
+                        <MapPin className="w-5 h-5 text-blue-500 flex-shrink-0" />
                         {trip.destination_name || 'Untitled Trip'}
                       </h2>
                       <div className="flex items-center gap-3 mt-1.5">
@@ -231,7 +212,7 @@ export default function SavedTripsPage() {
                       <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Dates</p>
                       <p className="text-sm text-slate-700">
                         {trip.start_date ? new Date(trip.start_date).toLocaleDateString() : 'TBD'}
-                        {' → '}
+                        {' -> '}
                         {trip.end_date ? new Date(trip.end_date).toLocaleDateString() : 'TBD'}
                       </p>
                     </div>
@@ -248,28 +229,6 @@ export default function SavedTripsPage() {
                         )}
                       </div>
                     </div>
-                  </div>
-
-                  {/* Budget, Pace, Wake Up */}
-                  <div className="grid grid-cols-3 gap-3">
-                    {trip.budget && (
-                      <div className="bg-slate-50 rounded-xl px-3 py-2 text-center">
-                        <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Budget</p>
-                        <p className="text-sm font-semibold text-slate-700">{BUDGET_LABELS[trip.budget] || trip.budget}</p>
-                      </div>
-                    )}
-                    {trip.pace && (
-                      <div className="bg-slate-50 rounded-xl px-3 py-2 text-center">
-                        <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Pace</p>
-                        <p className="text-sm font-semibold text-slate-700">{PACE_LABELS[trip.pace] || trip.pace}</p>
-                      </div>
-                    )}
-                    {trip.wake_up && (
-                      <div className="bg-slate-50 rounded-xl px-3 py-2 text-center">
-                        <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Wake Up</p>
-                        <p className="text-sm font-semibold text-slate-700">{WAKE_LABELS[trip.wake_up] || trip.wake_up}</p>
-                      </div>
-                    )}
                   </div>
 
                   {/* Interests */}
