@@ -6,13 +6,23 @@ import { signOut, useSession } from "next-auth/react";
 import {
   LayoutDashboard, Map, Bookmark, Settings, Plus,
   Search, Bell, ChevronDown, LogOut, User, Menu, X, Compass,
-  ArrowRight
+  ArrowRight, CheckCircle2, Clock, AlertCircle, Info,
+  Plane, Calendar, Star, Heart
 } from "lucide-react";
 
 interface SearchHistory {
   id: string;
   search_query: string;
   searched_at: string;
+}
+
+interface Notification {
+  id: string;
+  type: 'success' | 'info' | 'warning' | 'trip';
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
 }
 
 const navItems = [
@@ -24,14 +34,91 @@ const navItems = [
   { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
+// Sample notifications
+const sampleNotifications: Notification[] = [
+  {
+    id: "1",
+    type: "trip",
+    title: "Trip Confirmed",
+    message: "Your trip to Kyoto, Japan has been confirmed.",
+    time: "2 min ago",
+    read: false,
+  },
+  {
+    id: "2",
+    type: "success",
+    title: "Itinerary Ready",
+    message: "Your Bali itinerary has been generated successfully.",
+    time: "1 hour ago",
+    read: false,
+  },
+  {
+    id: "3",
+    type: "info",
+    title: "New Destination Added",
+    message: "Santorini, Greece is now available for planning.",
+    time: "3 hours ago",
+    read: true,
+  },
+  {
+    id: "4",
+    type: "warning",
+    title: "Weather Alert",
+    message: "Rain expected in Paris next week. Pack accordingly.",
+    time: "5 hours ago",
+    read: true,
+  },
+  {
+    id: "5",
+    type: "trip",
+    title: "Trip Reminder",
+    message: "Your trip to Rome starts in 3 days!",
+    time: "1 day ago",
+    read: true,
+  },
+];
+
+const notificationColors = {
+  trip: {
+    bg: "bg-blue-50 dark:bg-blue-950/30",
+    border: "border-blue-200 dark:border-blue-800",
+    icon: Plane,
+    iconBg: "bg-blue-100 dark:bg-blue-900/50",
+    iconColor: "text-blue-600 dark:text-blue-400",
+  },
+  success: {
+    bg: "bg-emerald-50 dark:bg-emerald-950/30",
+    border: "border-emerald-200 dark:border-emerald-800",
+    icon: CheckCircle2,
+    iconBg: "bg-emerald-100 dark:bg-emerald-900/50",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+  },
+  info: {
+    bg: "bg-purple-50 dark:bg-purple-950/30",
+    border: "border-purple-200 dark:border-purple-800",
+    icon: Info,
+    iconBg: "bg-purple-100 dark:bg-purple-900/50",
+    iconColor: "text-purple-600 dark:text-purple-400",
+  },
+  warning: {
+    bg: "bg-amber-50 dark:bg-amber-950/30",
+    border: "border-amber-200 dark:border-amber-800",
+    icon: AlertCircle,
+    iconBg: "bg-amber-100 dark:bg-amber-900/50",
+    iconColor: "text-amber-600 dark:text-amber-400",
+  },
+};
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>(sampleNotifications);
   const { data: session } = useSession();
 
   const isCollapsed = !sidebarOpen;
@@ -47,6 +134,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         .slice(0, 2)
         .toUpperCase()
     : "TR";
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   // Handle navigation click
   const handleNavClick = (path: string) => {
@@ -122,6 +211,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Mark notification as read
+  const markAsRead = (id: string) => {
+    setNotifications(notifications.map(n => 
+      n.id === id ? { ...n, read: true } : n
+    ));
+  };
+
+  // Mark all as read
+  const markAllAsRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
   // Fetch search history on mount
   useEffect(() => {
     fetchSearchHistory();
@@ -133,6 +234,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       const target = event.target as Element;
       if (!target.closest('.search-dropdown') && !target.closest('.search-input')) {
         setShowSearchDropdown(false);
+      }
+      if (!target.closest('.notifications-dropdown') && !target.closest('.notifications-trigger')) {
+        setNotificationsOpen(false);
       }
     };
     document.addEventListener('click', handleClickOutside);
@@ -170,6 +274,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [sidebarOpen]);
 
   const isActive = (path: string) => pathname === path || pathname?.startsWith(path + "/");
+
+  const formatTime = (timeStr: string) => {
+    return timeStr;
+  };
 
   return (
     <div className="h-screen flex bg-slate-50 overflow-hidden">
@@ -345,19 +453,112 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="ml-auto flex items-center gap-3">
-            <button
+            {/* <button
               type="button"
               onClick={() => router.push("/create-trip")}
               className="hidden sm:flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors text-sm font-semibold"
             >
               <Plus className="w-4 h-4" /> New Trip
-            </button>
+            </button> */}
 
-            <button type="button" className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors">
-              <Bell className="w-5 h-5 text-slate-600" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-orange-500" />
-            </button>
+            {/* Notifications Dropdown */}
+            <div className="relative notifications-trigger">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setNotificationsOpen(!notificationsOpen);
+                }}
+                className="relative p-2 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <Bell className="w-5 h-5 text-slate-600" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
 
+              {notificationsOpen && (
+                <div className="absolute right-0 top-full mt-2 w-96 max-h-[calc(100vh-200px)] bg-white border border-slate-100 rounded-2xl shadow-2xl z-50 overflow-hidden notifications-dropdown">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-teal-50">
+                    <div>
+                      <h3 className="font-bold text-slate-900">Notifications</h3>
+                      <p className="text-xs text-slate-500">{unreadCount} unread</p>
+                    </div>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllAsRead}
+                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Notification List */}
+                  <div className="overflow-y-auto max-h-[400px] divide-y divide-slate-100">
+                    {notifications.length > 0 ? (
+                      notifications.map((notification) => {
+                        const color = notificationColors[notification.type];
+                        const Icon = color.icon;
+                        const isUnread = !notification.read;
+
+                        return (
+                          <button
+                            key={notification.id}
+                            onClick={() => markAsRead(notification.id)}
+                            className={`w-full flex gap-3 px-4 py-3 hover:bg-slate-50 transition-all text-left ${
+                              isUnread ? 'bg-blue-50/50' : ''
+                            }`}
+                          >
+                            <div className={`flex-shrink-0 w-10 h-10 rounded-xl ${color.iconBg} flex items-center justify-center`}>
+                              <Icon className={`w-5 h-5 ${color.iconColor}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className={`text-sm font-medium ${isUnread ? 'text-slate-900' : 'text-slate-600'}`}>
+                                  {notification.title}
+                                </p>
+                                {isUnread && (
+                                  <span className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0 mt-1.5" />
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
+                                {notification.message}
+                              </p>
+                              <div className="flex items-center gap-1.5 mt-1.5">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                <span className="text-[10px] text-slate-400">{notification.time}</span>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 px-4">
+                        <Bell className="w-12 h-12 text-slate-200 mb-3" />
+                        <p className="text-sm font-medium text-slate-700">No notifications</p>
+                        <p className="text-xs text-slate-400 mt-1">You're all caught up!</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50/50">
+                    <button
+                      onClick={() => router.push("/notifications")}
+                      className="w-full text-center text-xs text-slate-500 hover:text-slate-700 font-medium transition-colors"
+                    >
+                      View all notifications
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Profile Dropdown */}
             <div className="relative profile-dropdown">
               <button
                 type="button"

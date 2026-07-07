@@ -14,7 +14,7 @@ const prisma = new PrismaClient({ adapter: pgAdapter });
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    // @ts-ignore - session.user.id exists but type doesn't know it
+    // @ts-ignore
     const userId = session?.user?.id || null;
 
     if (!userId) {
@@ -38,7 +38,6 @@ export async function GET() {
       }
     });
 
-    // Calculate stats
     const totalTrips = trips.length;
     const totalDays = trips.reduce((acc, trip) => acc + (trip.trip_days || 0), 0);
     const tripsCompleted = trips.filter(t => t.status === 'completed').length;
@@ -53,7 +52,7 @@ export async function GET() {
       }
     });
 
-    // Get favorite destinations (most frequent)
+    // Get favorite destinations
     const destCount = new Map<string, number>();
     trips.forEach(trip => {
       if (trip.destination_name) {
@@ -69,7 +68,7 @@ export async function GET() {
       totalTrips,
       countriesVisited: countries.size,
       totalDays,
-      totalAttractions: totalTrips * 8, // Placeholder
+      totalAttractions: totalTrips * 8,
       favoriteDestinations,
       tripsCompleted,
     });

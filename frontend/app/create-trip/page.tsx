@@ -10,6 +10,7 @@ import {
   ArrowLeftRight, CircleDot, Circle, Loader2,
   AlertCircle, DollarSign, Users
 } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Location {
@@ -147,11 +148,8 @@ function LocationSearch({
   useEffect(() => {
     if (initialQuery && initialQuery.trim().length >= 2 && !hasAutoSearched) {
       setHasAutoSearched(true);
-      // Trigger the search
       searchLocations(initialQuery);
-      // Set the value
       onChange(initialQuery);
-      // Show suggestions
       setShowSuggestions(true);
     }
   }, [initialQuery]);
@@ -360,8 +358,6 @@ function DestinationStep({
   useEffect(() => {
     if (searchQuery && searchQuery.trim().length >= 2 && !toQuery) {
       setToQuery(searchQuery);
-      // Trigger search for the query
-      // The LocationSearch component will handle the search
     }
   }, [searchQuery]);
 
@@ -764,6 +760,7 @@ function GeneratingScreen() {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 function CreateTripPageContent() {
+  const { success, error } = useToast();
   const [step, setStep] = useState<Step>("trip-type");
   const [tripType, setTripType] = useState<TripType>("one-way");
   const [fromLocation, setFromLocation] = useState<Location | null>(null);
@@ -779,7 +776,6 @@ function CreateTripPageContent() {
   // ─── Load saved data from sessionStorage only on first load ──────────────────
   useEffect(() => {
     if (isFirstLoad) {
-      // Check if we should clear data (if coming from navigation)
       const shouldClear = sessionStorage.getItem('clearTripData');
       if (shouldClear === 'true') {
         sessionStorage.removeItem('clearTripData');
@@ -808,7 +804,6 @@ function CreateTripPageContent() {
   // ─── Auto-advance to destination step if search query exists ──────────────
   useEffect(() => {
     if (searchQuery && searchQuery.trim().length >= 2 && step === "trip-type") {
-      // If there's a search query, auto-advance to destination step
       setStep("destination");
     }
   }, [searchQuery]);
@@ -852,63 +847,66 @@ function CreateTripPageContent() {
     }
   };
 
-const handleGenerate = async () => {
-  setIsGenerating(true);
-  try {
-    const tripData = {
-      trip_type: tripType,
-      origin_name: fromLocation?.name || null,
-      origin_lat: fromLocation?.lat || null,
-      origin_lng: fromLocation?.lng || null,
-      destination_name: toLocation?.name || "Unknown",
-      destination_lat: toLocation?.lat || null,
-      destination_lng: toLocation?.lng || null,
-      start_date: details?.startDate || null,
-      end_date: details?.endDate || null,
-      trip_days: details?.duration || 1,
-      travel_mode: style?.transport || "flight",
-      interests: [],
-      status: "planning",
-    };
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    try {
+      const tripData = {
+        trip_type: tripType,
+        origin_name: fromLocation?.name || null,
+        origin_lat: fromLocation?.lat || null,
+        origin_lng: fromLocation?.lng || null,
+        destination_name: toLocation?.name || "Unknown",
+        destination_lat: toLocation?.lat || null,
+        destination_lng: toLocation?.lng || null,
+        start_date: details?.startDate || null,
+        end_date: details?.endDate || null,
+        trip_days: details?.duration || 1,
+        travel_mode: style?.transport || "flight",
+        interests: [],
+        status: "planning",
+      };
 
-    console.log("🚀 Sending to API:", tripData);
+      console.log("🚀 Sending to API:", tripData);
 
-    const response = await fetch('/api/trips', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tripData),
-    });
+      const response = await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tripData),
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to save trip");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save trip");
+      }
+      
+      const data = await response.json();
+      console.log("✅ Trip saved:", data);
+      
+      success("Trip created successfully");
+      
+      // Clear session data
+      sessionStorage.setItem('clearTripData', 'true');
+      const keysToRemove = ['fromLocation', 'toLocation', 'details', 'style', 'tripType'];
+      keysToRemove.forEach(key => sessionStorage.removeItem(key));
+      
+      // Reset state
+      setFromLocation(null);
+      setToLocation(null);
+      setDetails(null);
+      setStyle(null);
+      setTripType("one-way");
+      setStep("trip-type");
+      
+      if (data.trip && data.trip.id) {
+        router.push(`/itinerary/${data.trip.id}`);
+      }
+    } catch (err) {
+      console.error("❌ Error generating trip:", err);
+      error(err instanceof Error ? err.message : "Failed to generate trip");
+      setIsGenerating(false);
     }
-    
-    const data = await response.json();
-    console.log("✅ Trip saved:", data);
-    
-    // Clear session data
-    sessionStorage.setItem('clearTripData', 'true');
-    const keysToRemove = ['fromLocation', 'toLocation', 'details', 'style', 'tripType'];
-    keysToRemove.forEach(key => sessionStorage.removeItem(key));
-    
-    // Reset state
-    setFromLocation(null);
-    setToLocation(null);
-    setDetails(null);
-    setStyle(null);
-    setTripType("one-way");
-    setStep("trip-type");
-    
-    if (data.trip && data.trip.id) {
-      router.push(`/itinerary/${data.trip.id}`);
-    }
-  } catch (error) {
-    console.error("❌ Error generating trip:", error);
-    alert(error instanceof Error ? error.message : "Failed to generate trip");
-    setIsGenerating(false);
-  }
-};
+  };
+
   if (isGenerating) {
     return (
       <div className="min-h-screen bg-[#f8fafb] flex items-center justify-center p-6">
@@ -1026,7 +1024,14 @@ const handleGenerate = async () => {
 
 export default function CreateTripPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#f8fafb] p-4 md:p-6"><div className="max-w-3xl mx-auto text-center py-20 text-slate-500">Loading trip builder...</div></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#f8fafb] p-4 md:p-6">
+        <div className="max-w-3xl mx-auto text-center py-20 text-slate-500">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p>Loading trip builder...</p>
+        </div>
+      </div>
+    }>
       <CreateTripPageContent />
     </Suspense>
   );

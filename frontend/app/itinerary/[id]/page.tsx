@@ -133,23 +133,23 @@ export default function TripDetailsPage() {
           <h2 className="text-xl font-bold text-slate-800 mb-6">Trip Preferences</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            {/* <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
               <div className="flex items-center gap-2 text-slate-500 mb-2 text-sm font-medium">
                 <Wallet className="w-4 h-4" /> Budget Level
               </div>
               <p className="text-lg font-semibold text-slate-800 capitalize">
                 {trip.budget || "Not specified"}
               </p>
-            </div>
+            </div> */}
             
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            {/* <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
               <div className="flex items-center gap-2 text-slate-500 mb-2 text-sm font-medium">
                 <Activity className="w-4 h-4" /> Travel Pace
               </div>
               <p className="text-lg font-semibold text-slate-800 capitalize">
                 {trip.pace || "Not specified"}
               </p>
-            </div>
+            </div> */}
 
             <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
               <div className="flex items-center gap-2 text-slate-500 mb-2 text-sm font-medium">
