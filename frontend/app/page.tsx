@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   MapPin, Zap, Star, Users, ArrowRight, CheckCircle,
   Globe, Route, Clock, Shield, ChevronRight
@@ -64,20 +64,10 @@ const testimonials = [
 // --- Main Components ---
 
 function LandingContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(() => searchParams.get("showLogin") === "true");
   const [isLoginMode, setIsLoginMode] = useState(true);
-
-  // 1. Detect URL parameter to auto-open the modal
-  useEffect(() => {
-    const showLogin = searchParams.get("showLogin");
-    if (showLogin === "true") {
-      setIsLoginMode(true);
-      setIsAuthModalOpen(true);
-    }
-  }, [searchParams]);
 
   const openAuthModal = (mode: 'login' | 'signup') => {
     setIsLoginMode(mode === 'login');
@@ -134,29 +124,86 @@ function LandingContent() {
         </div>
       </section>
 
-      {/* FEATURES SECTION */}
       <section id="features" className="py-24 bg-white">
-        {/* ... (Keep your existing Features content here) */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mx-auto text-center mb-14">
+            <p className="text-sm font-bold uppercase tracking-widest text-blue-600">Travel planning, simplified</p>
+            <h2 className="mt-3 text-3xl md:text-4xl font-extrabold text-slate-900">Everything for a better trip</h2>
+            <p className="mt-4 text-slate-600">Build a plan around your destination, dates, interests, and travel style.</p>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map(({ icon: Icon, title, desc }) => (
+              <article key={title} className="rounded-2xl border border-slate-100 bg-slate-50 p-6">
+                <span className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 text-blue-700"><Icon className="h-5 w-5" /></span>
+                <h3 className="text-lg font-bold text-slate-900">{title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{desc}</p>
+              </article>
+            ))}
+          </div>
+        </div>
       </section>
 
-      {/* HOW IT WORKS SECTION */}
-      <section id="how-it-works" className="py-24 bg-slate-50">
-        {/* ... (Keep your existing How It Works content here) */}
+      <section id="how-it-works" className="bg-slate-50 py-24">
+        <div id="demo" className="max-w-7xl mx-auto scroll-mt-24 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mx-auto text-center mb-14">
+            <p className="text-sm font-bold uppercase tracking-widest text-teal-600">Four simple steps</p>
+            <h2 className="mt-3 text-3xl md:text-4xl font-extrabold text-slate-900">From idea to itinerary</h2>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {steps.map((step) => (
+              <article key={step.num} className="rounded-2xl bg-white p-6 shadow-sm">
+                <span className="text-3xl font-black text-blue-100">{step.num}</span>
+                <h3 className="mt-4 font-bold text-slate-900">{step.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{step.desc}</p>
+              </article>
+            ))}
+          </div>
+        </div>
       </section>
 
-      {/* POPULAR DESTINATIONS SECTION */}
       <section id="destinations" className="py-24 bg-white">
-        {/* ... (Keep your existing Destinations content here) */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+            <div><p className="text-sm font-bold uppercase tracking-widest text-blue-600">Get inspired</p><h2 className="mt-2 text-3xl md:text-4xl font-extrabold text-slate-900">Popular destinations</h2></div>
+            <button onClick={() => openAuthModal("signup")} className="inline-flex items-center gap-2 font-semibold text-blue-700">Plan your own trip <ChevronRight className="h-4 w-4" /></button>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {destinations.map((destination) => (
+              <button key={destination.name} onClick={() => { setSearch(destination.name); openAuthModal("signup"); }} className="group relative h-64 overflow-hidden rounded-2xl text-left">
+                <img src={destination.image} alt={`${destination.name}, ${destination.country}`} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <span className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                <span className="absolute bottom-5 left-5 right-5 flex items-end justify-between text-white">
+                  <span><span className="block text-xl font-bold">{destination.name}</span><span className="text-sm text-white/80">{destination.country}</span></span>
+                  <span className="flex items-center gap-1 rounded-full bg-black/30 px-2.5 py-1 text-sm"><Star className="h-4 w-4 fill-amber-400 text-amber-400" />{destination.rating}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       </section>
 
-      {/* TESTIMONIALS SECTION */}
-      <section className="py-24 bg-gradient-to-br from-slate-900 to-blue-900">
-        {/* ... (Keep your existing Testimonials content here) */}
+      <section className="bg-gradient-to-br from-slate-900 to-blue-900 py-24 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mx-auto text-center mb-12"><p className="text-sm font-bold uppercase tracking-widest text-teal-300">Traveler stories</p><h2 className="mt-3 text-3xl md:text-4xl font-extrabold">Made for curious travelers</h2></div>
+          <div className="grid gap-5 lg:grid-cols-3">
+            {testimonials.map((testimonial) => (
+              <article key={testimonial.name} className="rounded-2xl border border-white/10 bg-white/5 p-6">
+                <div className="mb-4 flex gap-1 text-amber-400">{Array.from({ length: 5 }, (_, i) => <Star key={i} className="h-4 w-4 fill-current" />)}</div>
+                <p className="leading-7 text-slate-100">“{testimonial.text}”</p>
+                <div className="mt-6 flex items-center gap-3"><img src={testimonial.avatar} alt="" className="h-11 w-11 rounded-full object-cover" /><div><p className="font-bold">{testimonial.name}</p><p className="text-sm text-slate-300">{testimonial.role}</p></div></div>
+              </article>
+            ))}
+          </div>
+        </div>
       </section>
 
-      {/* CTA SECTION */}
-      <section id="pricing" className="py-24 bg-white">
-        {/* ... (Keep your existing CTA content here) */}
+      <section id="pricing" className="py-20 bg-white">
+        <div className="mx-auto max-w-4xl px-4 text-center">
+          <span className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><CheckCircle className="h-6 w-6" /></span>
+          <h2 className="mt-5 text-3xl md:text-4xl font-extrabold text-slate-900">Your next adventure starts here</h2>
+          <p className="mx-auto mt-4 max-w-xl text-slate-600">Create an account to save trips and build a personalized itinerary for your next destination.</p>
+          <button onClick={() => openAuthModal("signup")} className="mt-8 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-bold text-white transition-colors hover:bg-blue-700">Start planning <ArrowRight className="h-4 w-4" /></button>
+        </div>
       </section>
 
       <Footer />

@@ -1,6 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
+import { getDatabaseFailure } from '@/lib/database-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,15 +22,24 @@ try {
 
 export async function GET() {
   try {
-    // Get all trips
-    const allTrips = await prisma.trips.findMany();
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userTrips = await prisma.trips.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+    });
 
     // Calculate stats
-    const totalTrips = allTrips.length;
+    const totalTrips = userTrips.length;
     
     // Get unique countries visited from destination_name
     const countries = new Set<string>();
-    allTrips.forEach(trip => {
+    userTrips.forEach(trip => {
       if (trip.destination_name) {
         // Extract country from destination name (simple approach)
         const parts = trip.destination_name?.split(',') || [];
@@ -38,19 +50,24 @@ export async function GET() {
     
     // Calculate total days traveled
     let totalDays = 0;
-    allTrips.forEach(trip => {
+    userTrips.forEach(trip => {
       if (trip.trip_days) {
         totalDays += trip.trip_days;
       }
     });
     
-    // Get total attractions (places) - this would need a separate query
-    // For now, we'll use a placeholder or calculate from itineraries
-    const totalAttractions = allTrips.reduce((acc, trip) => {
-      // This would need to be calculated from itineraries
-      // For now, we'll use a random number or calculate from saved trips
-      return acc + 15; // Placeholder
-    }, 0);
+    const tripIds = userTrips.map((trip) => trip.id);
+    const totalAttractions = tripIds.length
+      ? await prisma.day_stops.count({
+          where: {
+            itinerary_days: {
+              is: {
+                itineraries: { is: { trip_id: { in: tripIds } } },
+              },
+            },
+          },
+        })
+      : 0;
 
     return NextResponse.json({
       totalTrips,
@@ -59,10 +76,11 @@ export async function GET() {
       totalAttractions,
     });
   } catch (error) {
+    const failure = getDatabaseFailure(error, "Failed to fetch stats");
     console.error("❌ Error fetching dashboard stats:", error);
     return NextResponse.json(
-      { error: "Failed to fetch stats" },
-      { status: 500 }
+      { error: failure.message },
+      { status: failure.status }
     );
   }
 }

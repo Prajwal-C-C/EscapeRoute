@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -429,14 +429,16 @@ function DestinationStep({
 
 // ─── Step 3: Details ──────────────────────────────────────────────────────────
 function DetailsStep({ onContinue, initialDetails }: { 
-  onContinue: (d: { startDate: string; endDate: string; duration: number; isOneDayTrip: boolean }) => void;
-  initialDetails?: { startDate: string; endDate: string; duration: number; isOneDayTrip: boolean };
+  onContinue: (d: { startDate: string; endDate: string; duration: number; isOneDayTrip: boolean; interests: string[] }) => void;
+  initialDetails?: { startDate: string; endDate: string; duration: number; isOneDayTrip: boolean; interests?: string[] };
 }) {
   const today = new Date().toISOString().split('T')[0];
   const [startDate, setStartDate] = useState(initialDetails?.startDate || today);
   const [endDate, setEndDate] = useState(initialDetails?.endDate || "");
   const [duration, setDuration] = useState(initialDetails?.duration || 1);
   const [isOneDayTrip, setIsOneDayTrip] = useState(initialDetails?.isOneDayTrip || false);
+  const [interests, setInterests] = useState<string[]>(initialDetails?.interests || []);
+  const interestOptions = ["Culture & history", "Food", "Nature", "Adventure", "Shopping", "Art & museums", "Nightlife", "Relaxation"];
   const [errors, setErrors] = useState<{ startDate?: string; endDate?: string }>({});
 
   useEffect(() => {
@@ -468,7 +470,8 @@ function DetailsStep({ onContinue, initialDetails }: {
         startDate, 
         endDate: isOneDayTrip ? startDate : endDate, 
         duration: isOneDayTrip ? 1 : duration, 
-        isOneDayTrip 
+        isOneDayTrip,
+        interests,
       });
     }
   };
@@ -540,6 +543,19 @@ function DetailsStep({ onContinue, initialDetails }: {
             <p className="text-sm text-slate-600">Duration: <span className="font-bold text-[#1e355c]">{duration} day{duration > 1 ? "s" : ""}</span></p>
           </div>
         )}
+        <div>
+          <p className="block text-slate-700 text-sm font-semibold mb-2">What are you interested in?</p>
+          <div className="flex flex-wrap gap-2">
+            {interestOptions.map((interest) => {
+              const selected = interests.includes(interest);
+              return <button key={interest} type="button" aria-pressed={selected}
+                onClick={() => setInterests((current) => selected ? current.filter((item) => item !== interest) : [...current, interest])}
+                className={`rounded-full border px-3 py-2 text-sm transition-colors ${selected ? "border-blue-600 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-600 hover:border-blue-300"}`}>
+                {interest}
+              </button>;
+            })}
+          </div>
+        </div>
       </div>
       <button 
         onClick={handleContinue} 
@@ -561,6 +577,7 @@ function StyleStep({
 }) {
   const [transport, setTransport] = useState(initialTransport || "flight");
   const [recommendedMode, setRecommendedMode] = useState("flight");
+  const [hasUserSelectedTransport, setHasUserSelectedTransport] = useState(Boolean(initialTransport));
   const [travelTimes, setTravelTimes] = useState<Record<string, string>>({});
   const [travelCosts, setTravelCosts] = useState<Record<string, {min: number, max: number}>>({});
   const [distance, setDistance] = useState<number | null>(null);
@@ -601,17 +618,26 @@ function StyleStep({
       setTravelCosts(costs);
 
       // Smart recommendation based on distance
-      if (dist < 50) { setRecommendedMode("bike"); }
-      else if (dist < 200) { setRecommendedMode("car"); }
-      else if (dist < 600) { setRecommendedMode("train"); }
-      else { setRecommendedMode("flight"); }
-      
-      // Only set transport if not already set by user
-      if (!initialTransport) {
-        setTransport(recommendedMode);
+      const recommended = dist < 50 ? "bike" : dist < 200 ? "car" : dist < 600 ? "train" : "flight";
+      setRecommendedMode(recommended);
+
+      if (!hasUserSelectedTransport && !initialTransport) {
+        setTransport(recommended);
       }
     }
-  }, [origin, destination]);
+  }, [origin, destination, initialTransport, hasUserSelectedTransport]);
+
+  useEffect(() => {
+    if (initialTransport) {
+      setTransport(initialTransport);
+      setHasUserSelectedTransport(true);
+    }
+  }, [initialTransport]);
+
+  const handleTransportSelect = (mode: string) => {
+    setHasUserSelectedTransport(true);
+    setTransport(mode);
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4 }} className="space-y-6">
@@ -633,7 +659,8 @@ function StyleStep({
           return (
             <button
               key={opt.id}
-              onClick={() => setTransport(opt.id)}
+              type="button"
+              onClick={(event) => { event.preventDefault(); handleTransportSelect(opt.id); }}
               className={`relative p-4 rounded-xl text-center transition-all border-2
                 ${active ? "border-[#27788e] bg-[#27788e]/5 shadow-md" : "border-slate-100 hover:border-slate-200"}`}
             >
@@ -752,12 +779,12 @@ function GeneratingScreen() {
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function CreateTripPage() {
+function CreateTripPageContent() {
   const [step, setStep] = useState<Step>("trip-type");
   const [tripType, setTripType] = useState<TripType>("one-way");
   const [fromLocation, setFromLocation] = useState<Location | null>(null);
   const [toLocation, setToLocation] = useState<Location | null>(null);
-  const [details, setDetails] = useState<{ startDate: string; endDate: string; duration: number; isOneDayTrip: boolean; } | null>(null);
+  const [details, setDetails] = useState<{ startDate: string; endDate: string; duration: number; isOneDayTrip: boolean; interests: string[] } | null>(null);
   const [style, setStyle] = useState<Record<string, string> | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
@@ -856,11 +883,8 @@ export default function CreateTripPage() {
         end_date: details?.endDate || null,
         trip_days: details?.duration || 1,
         travel_mode: style?.transport || "flight",
-        pace: "balanced",
-        wake_up: "mid",
-        interests: [],
+        interests: details?.interests || [],
         status: "planning",
-        budget: "comfort",
       };
 
       const response = await fetch('/api/trips', {
@@ -870,8 +894,13 @@ export default function CreateTripPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save trip");
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = typeof errorData?.error === "string"
+          ? errorData.error
+          : typeof errorData?.error?.message === "string"
+            ? errorData.error.message
+            : "Failed to generate and save the itinerary. Please try again.";
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();
@@ -1014,5 +1043,13 @@ export default function CreateTripPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CreateTripPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f8fafb] p-4 md:p-6"><div className="max-w-3xl mx-auto text-center py-20 text-slate-500">Loading trip builder...</div></div>}>
+      <CreateTripPageContent />
+    </Suspense>
   );
 }

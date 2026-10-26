@@ -48,96 +48,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         .toUpperCase()
     : "TR";
 
-  const handleNavClick = (path: string) => {
-    router.push(path);
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setSidebarOpen(false);
-    }
-  };
-
-  // Fetch search history
-  const fetchSearchHistory = async () => {
-    try {
-      const response = await fetch('/api/search-history');
-      if (!response.ok) throw new Error('Failed to fetch search history');
-      const data = await response.json();
-      setSearchHistory(data);
-    } catch (error) {
-      console.error('Error fetching search history:', error);
-    }
-  };
-
-  // Add a new search
-  const addSearch = async (query: string) => {
-    if (!query.trim() || query.trim().length < 2) return;
-
-    try {
-      const response = await fetch('/api/search-history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query.trim() }),
-      });
-
-      if (response.ok) {
-        await fetchSearchHistory();
-      }
-    } catch (error) {
-      console.error('Error adding search:', error);
-    }
-  };
-
-  // Handle search submit
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      addSearch(searchQuery);
-      router.push(`/create-trip?search=${encodeURIComponent(searchQuery)}`);
-      setSearchQuery("");
-      setShowSearchDropdown(false);
-    }
-  };
-
-  // Handle click on recent search
-  const handleRecentSearchClick = (query: string) => {
-    addSearch(query);
-    router.push(`/create-trip?search=${encodeURIComponent(query)}`);
-    setSearchQuery("");
-    setShowSearchDropdown(false);
-  };
-
-  // Clear all searches
-  const clearSearches = async () => {
-    try {
-      const response = await fetch('/api/search-history', {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setSearchHistory([]);
-        setShowSearchDropdown(false);
-      }
-    } catch (error) {
-      console.error('Error clearing searches:', error);
-    }
-  };
-
-  // Fetch search history on mount
-  useEffect(() => {
-    fetchSearchHistory();
-  }, []);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      if (!target.closest('.search-dropdown') && !target.closest('.search-input')) {
-        setShowSearchDropdown(false);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
-
+  // Close sidebar on route change (mobile)
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setSidebarOpen(window.innerWidth >= 1024);
@@ -168,6 +79,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [sidebarOpen]);
 
   const isActive = (path: string) => pathname === path || pathname?.startsWith(path + "/");
+
+  const handleNavClick = (path: string) => {
+    router.push(path);
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  };
 
   return (
     <div className="h-screen flex bg-slate-50 overflow-hidden">
@@ -272,74 +190,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {sidebarOpen ? <X className="w-5 h-5 text-slate-600" /> : <Menu className="w-5 h-5 text-slate-600" />}
           </button>
 
-          {/* Search Bar with Dropdown */}
-          <div className="flex-1 max-w-md hidden sm:block relative search-dropdown">
-            <form onSubmit={handleSearch} className="relative">
-              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
-                <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setShowSearchDropdown(true);
-                  }}
-                  onFocus={() => setShowSearchDropdown(true)}
-                  placeholder="Search for destinations, trips, or interests..."
-                  className="flex-1 bg-transparent outline-none text-slate-800 text-sm search-input"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setShowSearchDropdown(false);
-                    }}
-                    className="text-slate-400 hover:text-slate-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </form>
-
-            {/* Search Dropdown */}
-            {showSearchDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-slate-200 shadow-xl z-50 max-h-80 overflow-y-auto">
-                {searchHistory.length > 0 ? (
-                  <div>
-                    <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100">
-                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Recent Searches</span>
-                      <button
-                        onClick={clearSearches}
-                        className="text-xs text-red-500 hover:text-red-600 font-medium"
-                      >
-                        Clear All
-                      </button>
-                    </div>
-                    {searchHistory.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => handleRecentSearchClick(item.search_query)}
-                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Search className="w-4 h-4 text-slate-400" />
-                          <span className="text-sm text-slate-700">{item.search_query}</span>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-slate-400" />
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="px-4 py-8 text-center">
-                    <Search className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                    <p className="text-sm text-slate-500">No recent searches</p>
-                    <p className="text-xs text-slate-400 mt-1">Search for destinations to see them here</p>
-                  </div>
-                )}
-              </div>
-            )}
+          {/* Search Bar - Desktop */}
+          <div className="flex-1 max-w-md hidden sm:flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+            <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search destinations, trips..."
+              className="flex-1 bg-transparent outline-none text-slate-800 text-sm"
+            />
           </div>
 
           <div className="ml-auto flex items-center gap-3">

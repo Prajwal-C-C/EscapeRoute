@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   Plus, MapPin, Calendar, Compass, Clock, ArrowRight,
-  TrendingUp, Star, ChevronRight, Route, Search, X
+  TrendingUp, Star, ChevronRight, Search
 } from "lucide-react";
 
 interface Trip {
@@ -37,6 +37,12 @@ interface DashboardStats {
   totalAttractions: number;
 }
 
+async function getResponseErrorMessage(response: Response, fallback: string) {
+  if (response.status === 401) return "Your sign-in session expired. Sign in again to load your dashboard.";
+  const body = await response.json().catch(() => null);
+  return typeof body?.error === "string" ? body.error : fallback;
+}
+
 const STATUS_COLORS = {
   draft: 'bg-gray-100 text-gray-600',
   planning: 'bg-blue-100 text-blue-700',
@@ -56,9 +62,21 @@ export default function DashboardContent() {
     totalAttractions: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   const userName = session?.user?.name || "Traveler";
+
+  const fetchSearchHistory = async () => {
+    try {
+      const response = await fetch('/api/search-history');
+      if (!response.ok) throw new Error(await getResponseErrorMessage(response, 'Failed to fetch search history.'));
+      const data = await response.json();
+      setSearchHistory(data);
+    } catch (error) {
+      setDashboardError(error instanceof Error ? error.message : 'Could not load search history.');
+    }
+  };
 
   // Fetch all data
   useEffect(() => {
@@ -68,20 +86,20 @@ export default function DashboardContent() {
         
         // Fetch trips
         const tripsResponse = await fetch('/api/trips');
-        if (!tripsResponse.ok) throw new Error('Failed to fetch trips');
+        if (!tripsResponse.ok) throw new Error(await getResponseErrorMessage(tripsResponse, 'Failed to fetch trips.'));
         const tripsData = await tripsResponse.json();
         setTrips(tripsData);
 
         // Fetch stats
         const statsResponse = await fetch('/api/dashboard/stats');
-        if (!statsResponse.ok) throw new Error('Failed to fetch stats');
+        if (!statsResponse.ok) throw new Error(await getResponseErrorMessage(statsResponse, 'Failed to fetch dashboard stats.'));
         const statsData = await statsResponse.json();
         setStats(statsData);
 
         // Fetch search history
         await fetchSearchHistory();
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        setDashboardError(error instanceof Error ? error.message : 'Could not load dashboard data.');
       } finally {
         setIsLoading(false);
       }
@@ -89,18 +107,6 @@ export default function DashboardContent() {
 
     fetchData();
   }, []);
-
-  // Fetch search history
-  const fetchSearchHistory = async () => {
-    try {
-      const response = await fetch('/api/search-history');
-      if (!response.ok) throw new Error('Failed to fetch search history');
-      const data = await response.json();
-      setSearchHistory(data);
-    } catch (error) {
-      console.error('Error fetching search history:', error);
-    }
-  };
 
   // Add a new search
   const addSearch = async (query: string) => {
@@ -219,6 +225,13 @@ export default function DashboardContent() {
           <Plus className="w-4 h-4" /> Plan New Trip
         </button>
       </div>
+
+      {dashboardError && (
+        <div role="alert" className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+          <p>{dashboardError}</p>
+          <button onClick={() => window.location.reload()} className="shrink-0 font-semibold underline underline-offset-2">Try again</button>
+        </div>
+      )}
 
       {/* Stats Section */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

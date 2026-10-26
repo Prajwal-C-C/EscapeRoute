@@ -1,10 +1,13 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
+import { generateItinerary, getItineraryErrorMessage, getItineraryErrorStatus } from '@/services/ai.service';
+import { getDatabaseFailure } from '@/lib/database-errors';
 
 export const dynamic = 'force-dynamic';
 
-// Initialize Prisma
 let prisma: PrismaClient;
 
 try {
@@ -17,253 +20,148 @@ try {
   prisma = new PrismaClient();
 }
 
-// ==========================================
-// Helper: Geocode a location using Geoapify
-// ==========================================
 async function geocodeLocation(locationName: string): Promise<{ lat: number | null; lng: number | null }> {
-  if (!locationName) {
-    return { lat: null, lng: null };
-  }
+  if (!locationName) return { lat: null, lng: null };
 
   try {
     const apiKey = process.env.GEOAPIFY_API_KEY || process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY;
-    
-    if (!apiKey) {
-      console.warn("⚠️ Geoapify API key not found");
-      return { lat: null, lng: null };
-    }
+    if (!apiKey) return { lat: null, lng: null };
 
     const geoResponse = await fetch(
-      `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(
-        locationName
-      )}&limit=1&apiKey=${apiKey}`
+      `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(locationName)}&limit=1&apiKey=${apiKey}`
     );
 
-    if (!geoResponse.ok) {
-      console.error("❌ Geoapify API error:", geoResponse.status);
-      return { lat: null, lng: null };
-    }
+    if (!geoResponse.ok) return { lat: null, lng: null };
 
     const geoData = await geoResponse.json();
 
     if (geoData.features?.length > 0) {
       const feature = geoData.features[0];
-      const lat = feature.properties?.lat || null;
-      const lng = feature.properties?.lon || null;
-      
-      console.log(`✅ Geocoded "${locationName}" → (${lat}, ${lng})`);
-      return { lat, lng };
+      return { lat: feature.properties?.lat || null, lng: feature.properties?.lon || null };
     } else {
-      console.warn(`⚠️ No features found for: ${locationName}`);
       return { lat: null, lng: null };
     }
-  } catch (geoError) {
-    console.error(`❌ Geocoding error for "${locationName}":`, geoError);
+  } catch {
     return { lat: null, lng: null };
   }
 }
 
 // ==========================================
-// GET: Fetch all saved trips
+// GET: Fetch ONLY the logged-in user's trips
 // ==========================================
 export async function GET() {
   try {
-    const allTrips = await prisma.trips.findMany({
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userTrips = await prisma.trips.findMany({
+      where: { user_id: userId }, // Filter securely by user_id
       orderBy: { created_at: 'desc' }
     });
-    return NextResponse.json(allTrips);
+    
+    return NextResponse.json(userTrips);
   } catch (error) {
     console.error("❌ GET Database error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch trips" },
-      { status: 500 }
-    );
+    const failure = getDatabaseFailure(error, "Failed to fetch trips");
+    return NextResponse.json({ error: failure.message }, { status: failure.status });
   }
 }
 
 // ==========================================
-// POST: Save a new trip to the database
+// POST: Save a new trip attached to the user
 // ==========================================
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
-    
-    console.log("📥 Incoming POST data:", body);
-    
     const { 
-      destination_name,
-      origin_name,
-      trip_type,
-      start_date,
-      end_date,
-      trip_days,
-      travel_mode,
-      budget,
-      pace,
-      wake_up,
-      interests,
-      status,
-      destination_lat,
-      destination_lng,
-      origin_lat,
-      origin_lng
+      destination_name, origin_name, trip_type, start_date, end_date, 
+      trip_days, travel_mode, interests, destination_lat,
+      destination_lng, origin_lat, origin_lng 
     } = body;
 
-    // --- Geocode Destination (To Location) ---
     let destLat = destination_lat || null;
     let destLng = destination_lng || null;
-
     if (!destLat && destination_name) {
       const result = await geocodeLocation(destination_name);
       destLat = result.lat;
       destLng = result.lng;
     }
 
-    // --- Geocode Origin (From Location) ---
     let orgLat = origin_lat || null;
     let orgLng = origin_lng || null;
-
     if (!orgLat && origin_name) {
       const result = await geocodeLocation(origin_name);
       orgLat = result.lat;
       orgLng = result.lng;
     }
 
-    // Prepare data for database
-    const tripData: any = {
+    const normalizedInterests = Array.isArray(interests) ? interests.filter((item: unknown): item is string => typeof item === 'string').slice(0, 12) : [];
+    const duration = Number.isInteger(Number(trip_days)) ? Math.min(Math.max(Number(trip_days), 1), 30) : 1;
+    const prompt = [
+      `Create a practical ${duration}-day travel itinerary for ${destination_name || 'the selected destination'}.`,
+      origin_name ? `Origin: ${origin_name}.` : '',
+      `Trip type: ${trip_type || 'one-way'}. Transport: ${travel_mode || 'unspecified'}.`,
+      `Dates: ${start_date || 'not specified'} to ${end_date || 'not specified'}.`,
+      `Interests: ${normalizedInterests.length ? normalizedInterests.join(', ') : 'general highlights, local food, and culture'}.`,
+      `CRITICAL FORMATTING GUIDELINES:
+- DO NOT use markdown tables or pipe columns.
+- Make it less sentence-heavy: write short, punchy summary bullet points highlighting WHERE TO VISIT.
+- Structure strictly day-by-day using headings: "### Day 1: [Short Theme/Title]", "### Day 2: [Short Theme/Title]", etc.
+- Under each Day, provide:
+  * **Places to Visit**: Comma-separated list of 3-5 key attractions or spots for the day.
+  * **Morning**: 2-3 short bullet points (spot name + 1 short summary note, breakfast/coffee spot).
+  * **Afternoon**: 2-3 short bullet points (spot name + 1 short summary note, lunch spot).
+  * **Evening**: 2-3 short bullet points (sunset/stroll spot, dinner spot).
+- Keep each bullet point brief (under 15 words) so it reads like an easy-to-scan summary of places to visit.
+- Optionally include 2-3 practical tips at the end under "### Quick Travel Tips".`
+    ].filter(Boolean).join('\n');
+    const generatedContent = await generateItinerary(prompt);
+    if (!generatedContent?.trim()) {
+      return NextResponse.json({ error: 'The itinerary service returned an empty response. Please try again.' }, { status: 502 });
+    }
+
+    const tripData: Prisma.tripsUncheckedCreateInput = {
+      user_id: userId, // Link the trip to the active user
       destination_name: destination_name || "Unknown Destination",
-      trip_days: trip_days || 1,
+      trip_days: duration,
       travel_mode: travel_mode || null,
-      budget: budget || null,
-      pace: pace || null,
-      wake_up: wake_up || null,
-      interests: interests || [],
-      status: status || "planning",
+      interests: normalizedInterests,
+      status: "planned",
       trip_type: trip_type || null,
       origin_name: origin_name || null,
+      destination_lat: destLat,
+      destination_lng: destLng,
+      origin_lat: orgLat,
+      origin_lng: orgLng,
+      start_date: start_date ? new Date(start_date) : null,
+      end_date: end_date ? new Date(end_date) : null,
     };
 
-    // Add coordinates if they exist
-    if (destLat !== null && destLat !== undefined) {
-      tripData.destination_lat = destLat;
-    }
-    if (destLng !== null && destLng !== undefined) {
-      tripData.destination_lng = destLng;
-    }
-    if (orgLat !== null && orgLat !== undefined) {
-      tripData.origin_lat = orgLat;
-    }
-    if (orgLng !== null && orgLng !== undefined) {
-      tripData.origin_lng = orgLng;
-    }
-
-    // Add dates if they exist
-    if (start_date) {
-      tripData.start_date = new Date(start_date);
-    }
-    if (end_date) {
-      tripData.end_date = new Date(end_date);
-    }
-
-    console.log("💾 Saving to database:", tripData);
-
-    // Save to database
     const newTrip = await prisma.trips.create({
-      data: tripData,
+      data: {
+        ...tripData,
+        ai_recommendations: {
+          create: { recommendation_type: 'itinerary', content: { text: generatedContent } },
+        },
+      },
     });
 
-    console.log("✅ Trip saved successfully:", { 
-      id: newTrip.id, 
-      destination: newTrip.destination_name,
-      origin: newTrip.origin_name
-    });
-
-    return NextResponse.json({ 
-      success: true, 
-      trip: newTrip 
-    }, { status: 201 });
-
+    return NextResponse.json({ success: true, trip: newTrip }, { status: 201 });
   } catch (error) {
     console.error("❌ POST Database error:", error);
-    
-    let errorMessage = "Failed to create trip";
-    if (error instanceof Error) {
-      errorMessage = error.message;
-      
-      // Check for specific Prisma errors
-      if (errorMessage.includes("Unknown argument")) {
-        errorMessage = "Database schema mismatch. Please run 'npx prisma migrate dev --name add_origin_coordinates'";
-      }
-    }
-    
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 }
-    );
-  }
-}
-
-// ==========================================
-// DELETE: Delete a trip
-// ==========================================
-// export async function DELETE(request: NextRequest) {
-//   try {
-//     const { searchParams } = new URL(request.url);
-//     const id = searchParams.get('id');
-
-//     if (!id) {
-//       return NextResponse.json(
-//         { error: "Trip ID is required" },
-//         { status: 400 }
-//       );
-//     }
-
-//     await prisma.trips.delete({
-//       where: { id },
-//     });
-
-//     return NextResponse.json({ 
-//       success: true, 
-//       message: "Trip deleted successfully" 
-//     });
-
-//   } catch (error) {
-//     console.error("❌ DELETE Database error:", error);
-//     return NextResponse.json(
-//       { error: "Failed to delete trip" },
-//       { status: 500 }
-//     );
-//   }
-// }
-// Add this to your existing DELETE handler or update it
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params;
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "Trip ID is required" },
-        { status: 400 }
-      );
-    }
-
-    await prisma.trips.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ 
-      success: true, 
-      message: "Trip deleted successfully" 
-    });
-
-  } catch (error) {
-    console.error("❌ DELETE Database error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete trip" },
-      { status: 500 }
-    );
+    const failure = getDatabaseFailure(error, getItineraryErrorMessage(error));
+    const status = failure.status === 503 ? 503 : getItineraryErrorStatus(error);
+    return NextResponse.json({ error: failure.message }, { status });
   }
 }

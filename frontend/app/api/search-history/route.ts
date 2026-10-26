@@ -2,6 +2,8 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
+import { getDatabaseFailure } from '@/lib/database-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,12 +18,12 @@ const prisma = new PrismaClient({ adapter: pgAdapter });
 // ==========================================
 export async function GET() {
   try {
-    const session = await getServerSession();
-    // @ts-ignore - session.user.id exists but type doesn't know it
-    const userId = session?.user?.id || null;
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const searches = await prisma.search_history.findMany({
-      where: userId ? { user_id: userId } : {},
+      where: { user_id: userId },
       orderBy: { searched_at: 'desc' },
       take: 10,
       select: {
@@ -34,9 +36,10 @@ export async function GET() {
     return NextResponse.json(searches);
   } catch (error) {
     console.error("❌ Error fetching search history:", error);
+    const failure = getDatabaseFailure(error, "Failed to fetch search history");
     return NextResponse.json(
-      { error: "Failed to fetch search history" },
-      { status: 500 }
+      { error: failure.message },
+      { status: failure.status }
     );
   }
 }
@@ -56,15 +59,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const session = await getServerSession();
-    // @ts-ignore - session.user.id exists but type doesn't know it
-    const userId = session?.user?.id || null;
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // Check if the search already exists
     const existingSearch = await prisma.search_history.findFirst({
       where: {
         search_query: query.trim(),
-        ...(userId ? { user_id: userId } : {}),
+        user_id: userId,
       },
     });
 
@@ -86,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     // Keep only 10 most recent searches
     const allSearches = await prisma.search_history.findMany({
-      where: userId ? { user_id: userId } : {},
+      where: { user_id: userId },
       orderBy: { searched_at: 'desc' },
       skip: 10,
     });
@@ -103,9 +106,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, search: newSearch }, { status: 201 });
   } catch (error) {
     console.error("❌ Error adding search:", error);
+    const failure = getDatabaseFailure(error, "Failed to add search");
     return NextResponse.json(
-      { error: "Failed to add search" },
-      { status: 500 }
+      { error: failure.message },
+      { status: failure.status }
     );
   }
 }
@@ -115,12 +119,12 @@ export async function POST(request: NextRequest) {
 // ==========================================
 export async function DELETE() {
   try {
-    const session = await getServerSession();
-    // @ts-ignore - session.user.id exists but type doesn't know it
-    const userId = session?.user?.id || null;
+    const session = await getServerSession(authOptions);
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     await prisma.search_history.deleteMany({
-      where: userId ? { user_id: userId } : {},
+      where: { user_id: userId },
     });
 
     return NextResponse.json({ 
@@ -129,9 +133,10 @@ export async function DELETE() {
     });
   } catch (error) {
     console.error("❌ Error clearing search history:", error);
+    const failure = getDatabaseFailure(error, "Failed to clear search history");
     return NextResponse.json(
-      { error: "Failed to clear search history" },
-      { status: 500 }
+      { error: failure.message },
+      { status: failure.status }
     );
   }
 }
