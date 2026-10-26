@@ -6,7 +6,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { 
   Mail, Lock, User, Eye, EyeOff, 
-  ArrowRight, X, Check
+  ArrowRight, Check
 } from "lucide-react";
 import { signIn } from "next-auth/react";
 
@@ -21,11 +21,32 @@ export function AuthModal({ isLogin, onClose, onToggleMode }: AuthModalProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [authError, setAuthError] = useState("");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
-    await signIn("google", { callbackUrl: "/dashboard" });
+    setAuthError("");
+    try {
+      const result = await signIn("google", { callbackUrl: "/dashboard", redirect: false });
+      if (!result?.url) {
+        setAuthError("Google sign-in could not start. Check your connection and try again.");
+        return;
+      }
+
+      const authorizationUrl = new URL(result.url, window.location.origin);
+      if (authorizationUrl.searchParams.has("error")) {
+        setAuthError("Google sign-in failed. Check that Google OAuth is enabled and its callback URL is configured.");
+        return;
+      }
+
+      window.location.assign(result.url);
+    } catch (error) {
+      console.error("Google sign-in failed:", error);
+      setAuthError("Could not connect to Google. Check your internet connection and try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,6 +143,7 @@ export function AuthModal({ isLogin, onClose, onToggleMode }: AuthModalProps) {
           </button>
           
         </div>
+        {authError && <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{authError}</p>}
 
         <div className="relative my-4">
           <div className="absolute inset-0 flex items-center">

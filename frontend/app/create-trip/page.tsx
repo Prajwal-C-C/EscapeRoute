@@ -429,14 +429,16 @@ function DestinationStep({
 
 // ─── Step 3: Details ──────────────────────────────────────────────────────────
 function DetailsStep({ onContinue, initialDetails }: { 
-  onContinue: (d: { startDate: string; endDate: string; duration: number; isOneDayTrip: boolean }) => void;
-  initialDetails?: { startDate: string; endDate: string; duration: number; isOneDayTrip: boolean };
+  onContinue: (d: { startDate: string; endDate: string; duration: number; isOneDayTrip: boolean; interests: string[] }) => void;
+  initialDetails?: { startDate: string; endDate: string; duration: number; isOneDayTrip: boolean; interests?: string[] };
 }) {
   const today = new Date().toISOString().split('T')[0];
   const [startDate, setStartDate] = useState(initialDetails?.startDate || today);
   const [endDate, setEndDate] = useState(initialDetails?.endDate || "");
   const [duration, setDuration] = useState(initialDetails?.duration || 1);
   const [isOneDayTrip, setIsOneDayTrip] = useState(initialDetails?.isOneDayTrip || false);
+  const [interests, setInterests] = useState<string[]>(initialDetails?.interests || []);
+  const interestOptions = ["Culture & history", "Food", "Nature", "Adventure", "Shopping", "Art & museums", "Nightlife", "Relaxation"];
   const [errors, setErrors] = useState<{ startDate?: string; endDate?: string }>({});
 
   useEffect(() => {
@@ -468,7 +470,8 @@ function DetailsStep({ onContinue, initialDetails }: {
         startDate, 
         endDate: isOneDayTrip ? startDate : endDate, 
         duration: isOneDayTrip ? 1 : duration, 
-        isOneDayTrip 
+        isOneDayTrip,
+        interests,
       });
     }
   };
@@ -540,6 +543,19 @@ function DetailsStep({ onContinue, initialDetails }: {
             <p className="text-sm text-slate-600">Duration: <span className="font-bold text-[#1e355c]">{duration} day{duration > 1 ? "s" : ""}</span></p>
           </div>
         )}
+        <div>
+          <p className="block text-slate-700 text-sm font-semibold mb-2">What are you interested in?</p>
+          <div className="flex flex-wrap gap-2">
+            {interestOptions.map((interest) => {
+              const selected = interests.includes(interest);
+              return <button key={interest} type="button" aria-pressed={selected}
+                onClick={() => setInterests((current) => selected ? current.filter((item) => item !== interest) : [...current, interest])}
+                className={`rounded-full border px-3 py-2 text-sm transition-colors ${selected ? "border-blue-600 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-600 hover:border-blue-300"}`}>
+                {interest}
+              </button>;
+            })}
+          </div>
+        </div>
       </div>
       <button 
         onClick={handleContinue} 
@@ -768,7 +784,7 @@ function CreateTripPageContent() {
   const [tripType, setTripType] = useState<TripType>("one-way");
   const [fromLocation, setFromLocation] = useState<Location | null>(null);
   const [toLocation, setToLocation] = useState<Location | null>(null);
-  const [details, setDetails] = useState<{ startDate: string; endDate: string; duration: number; isOneDayTrip: boolean; } | null>(null);
+  const [details, setDetails] = useState<{ startDate: string; endDate: string; duration: number; isOneDayTrip: boolean; interests: string[] } | null>(null);
   const [style, setStyle] = useState<Record<string, string> | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isFirstLoad, setIsFirstLoad] = useState(true);
@@ -867,7 +883,7 @@ function CreateTripPageContent() {
         end_date: details?.endDate || null,
         trip_days: details?.duration || 1,
         travel_mode: style?.transport || "flight",
-        interests: [],
+        interests: details?.interests || [],
         status: "planning",
       };
 
@@ -878,8 +894,13 @@ function CreateTripPageContent() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save trip");
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = typeof errorData?.error === "string"
+          ? errorData.error
+          : typeof errorData?.error?.message === "string"
+            ? errorData.error.message
+            : "Failed to generate and save the itinerary. Please try again.";
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();

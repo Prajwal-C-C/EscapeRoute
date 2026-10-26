@@ -10,7 +10,7 @@ try {
     connectionString: process.env.DATABASE_URL as string
   });
   prisma = new PrismaClient({ adapter });
-} catch (error) {
+} catch {
   prisma = new PrismaClient();
 }
 
@@ -23,8 +23,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    // @ts-ignore
-    const userId = session?.user?.id;
+    const userId = (session?.user as { id?: string } | undefined)?.id;
 
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -37,6 +36,7 @@ export async function GET(
         id: tripId,
         user_id: userId, // Ownership security check
       },
+      include: { ai_recommendations: { where: { recommendation_type: 'itinerary' }, orderBy: { created_at: 'desc' } } },
     });
 
     if (!trip) {
@@ -59,8 +59,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    // @ts-ignore
-    const userId = session?.user?.id;
+    const userId = (session?.user as { id?: string } | undefined)?.id;
 
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

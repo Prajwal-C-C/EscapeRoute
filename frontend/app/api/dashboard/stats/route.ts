@@ -3,6 +3,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth';
+import { getDatabaseFailure } from '@/lib/database-errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,8 +23,7 @@ try {
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    // @ts-ignore
-    const userId = session?.user?.id;
+    const userId = (session?.user as { id?: string } | undefined)?.id;
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -56,13 +56,18 @@ export async function GET() {
       }
     });
     
-    // Get total attractions (places) - this would need a separate query
-    // For now, we'll use a placeholder or calculate from itineraries
-    const totalAttractions = userTrips.reduce((acc) => {
-      // This would need to be calculated from itineraries
-      // For now, we'll use a random number or calculate from saved trips
-      return acc + 15; // Placeholder
-    }, 0);
+    const tripIds = userTrips.map((trip) => trip.id);
+    const totalAttractions = tripIds.length
+      ? await prisma.day_stops.count({
+          where: {
+            itinerary_days: {
+              is: {
+                itineraries: { is: { trip_id: { in: tripIds } } },
+              },
+            },
+          },
+        })
+      : 0;
 
     return NextResponse.json({
       totalTrips,
@@ -71,10 +76,11 @@ export async function GET() {
       totalAttractions,
     });
   } catch (error) {
+    const failure = getDatabaseFailure(error, "Failed to fetch stats");
     console.error("❌ Error fetching dashboard stats:", error);
     return NextResponse.json(
-      { error: "Failed to fetch stats" },
-      { status: 500 }
+      { error: failure.message },
+      { status: failure.status }
     );
   }
 }

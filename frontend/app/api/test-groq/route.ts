@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateItinerary } from "@/services/ai.service";
+import { generateItinerary, getItineraryErrorMessage } from "@/services/ai.service";
 
 
 export async function GET() {
@@ -18,9 +18,9 @@ export async function GET() {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getItineraryErrorMessage(error),
       },
-      { status: 500 }
+      { status: 502 }
     );
   }
 }
